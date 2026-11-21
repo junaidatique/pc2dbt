@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Converter Overview</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/glossary-data.js"></script>
+<script src="assets/site.js"></script>
+</head>
+<body>
+<header class="site-header"><div class="inner">
+  <a class="brand" href="index.html">PowerCenter → dbt <span>explainer</span></a>
+  <nav class="site-nav" id="site-nav" aria-label="Sections"></nav>
+</div></header>
+
+<main>
+  <h1>PowerCenter → dbt converter</h1>
+  <p class="lead">PowerCenter saves a data pipeline as an XML drawing of boxes and wires. dbt does the same job with plain SQL files. We are building a tool that reads the XML and writes the SQL.</p>
+
+  <figure>
+    <div class="flow" role="img" aria-label="The XML file is read by the converter, which runs five steps and writes a dbt project.">
+      <div class="flow-node input">
+        <span class="tag input">Input</span>
+        <span class="t">PowerCenter XML</span>
+        <span class="s">one exported file, 4,701 lines</span>
+        <ul class="small">
+          <li><a class="term" data-term="pc-source">PC Sources</a> and <a class="term" data-term="pc-target">PC Targets</a></li>
+          <li>3 <a class="term" data-term="mapping">mappings</a> (the logic)</li>
+          <li><a class="term" data-term="workflow">workflow</a> and <a class="term" data-term="session">sessions</a> (run order)</li>
+        </ul>
+      </div>
+      <div class="flow-arrow">read by</div>
+      <div class="flow-node convert">
+        <span class="tag convert">What we build</span>
+        <span class="t">Converter</span>
+        <span class="s">five steps, in order</span>
+        <ul class="small">
+          <li><a class="term" data-term="parse">Parse</a> the XML into objects</li>
+          <li>build the <a class="term" data-term="mapping-graph">graph</a></li>
+          <li><a class="term" data-term="walk">Walk</a> back from each target</li>
+          <li><a class="term" data-term="translate">Translate</a> boxes to SQL</li>
+          <li><a class="term" data-term="write">Write</a> the files</li>
+        </ul>
+      </div>
+      <div class="flow-arrow">writes</div>
+      <div class="flow-node output">
+        <span class="tag output">Output</span>
+        <span class="t">dbt project</span>
+        <span class="s">plain SQL files</span>
+        <ul class="small">
+          <li>one <a class="term" data-term="model">model</a> (.sql) per PC Target</li>
+          <li><code>sources.yml</code> for the raw tables</li>
+          <li>a list of <a class="term" data-term="flag">flags</a></li>
+        </ul>
+      </div>
+    </div>
+    <figcaption>The whole job in one picture. Hover a dotted word to see its meaning; click it to open the glossary.</figcaption>
+  </figure>
+
+  <h2>The three parts</h2>
+  <div class="cards">
+    <div class="card k-input">
+      <h3>Input: the XML</h3>
+      <p>A mapping is a chain of boxes (<a class="term" data-term="transformation">transformations</a>). <a class="term" data-term="connector">Connectors</a> join one column to the next.</p>
+      <p>The session and workflow only say <em>when</em> things run, not <em>what</em> they compute.</p>
+      <p><a href="example.html">See one mapping, piece by piece →</a></p>
+    </div>
+    <div class="card k-convert">
+      <h3>Converter: five steps</h3>
+      <p>Turn the drawing into a graph, follow it back from each target, and turn every box into one SQL step (a <a class="term" data-term="cte">CTE</a>).</p>
+      <p>Hard parts: Informatica's own formula language, and boxes with no direct SQL twin.</p>
+      <p><a href="steps.html">Step through the five steps →</a></p>
+    </div>
+    <div class="card k-output">
+      <h3>Output: dbt models</h3>
+      <p>Each model is one <code>select</code>. A table written by one mapping and read by the next becomes a <a class="term" data-term="ref">ref()</a>.</p>
+      <p>When the XML looks wrong, the SQL copies it and carries a flag.</p>
+      <p><a href="example.html#output">See the SQL for one table →</a></p>
+    </div>
+  </div>
+
+  <h2>What is in the XML, in numbers</h2>
+  <p class="muted small">Counted from the file with a script. Line references open the file on GitHub.</p>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>What</th><th>Count</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td>Mappings</td><td class="num">3</td><td>staging <a class="L">L90</a>, enriched marts <a class="L">L1210</a>, core marts <a class="L">L3107</a></td></tr>
+        <tr><td>Transformations (boxes)</td><td class="num">98</td><td>24 + 45 + 29. Source Qualifier 28, Expression 25, Joiner 16, Sorter 15, Aggregator 9, Router 2, Union 2, Filter 1</td></tr>
+        <tr><td>Connectors (wires)</td><td class="num">1,066</td><td>165 + 624 + 277</td></tr>
+        <tr><td>PC Sources / PC Targets</td><td class="num">12 / 16</td><td>sources: 6 RAW_ + 6 STG_. targets: 6 STG_ + 5 core marts + 5 enriched marts</td></tr>
+        <tr><td>Port expressions</td><td class="num">384</td><td><b>270 pass-through</b> (201 same name, 69 renames) and <b>114 with real logic</b></td></tr>
+        <tr><td>Router conditions</td><td class="num">5</td><td>e.g. <code>REGION = 'APAC'</code> <a class="L">L276</a></td></tr>
+        <tr><td><b>Logic to translate</b></td><td class="num"><b>119</b></td><td>114 + 5. Of the 114, 26 are helper <a class="term" data-term="variable-port">variable ports</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>How we know the output is right</h2>
+  <figure>
+    <div class="flow tight" role="img" aria-label="Our models and the reference models both run on the same seed data in DuckDB, then the results are compared.">
+      <div class="flow-node convert"><span class="t">1. Unit tests</span><span class="s">small XML piece in, expected SQL out. One per box type and function.</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-node convert"><span class="t">2. It compiles</span><span class="s"><code>dbt compile</code> passes and the SQL runs in <a class="term" data-term="duckdb">DuckDB</a>.</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-node output"><span class="t">3. It matches</span><span class="s">run our models and the <a class="term" data-term="reference-project">reference project</a> on the same <a class="term" data-term="seed">seed</a> data, then compare rows.</span></div>
+    </div>
+    <figcaption>Each check catches a different mistake: wrong translation, invalid SQL, wrong data. Check 3 only works where a reference model exists. The 5 enriched marts have none.</figcaption>
+  </figure>
+
+  <h2>Decisions so far</h2>
+  <div class="callout decision">
+    <p><b>D1 · Follow the connectors, not the names.</b> When the XML looks wrong, copy what it does and add a flag. Don't fix it. First case: STG_ORDERS gets dollars in its <code>*_CENTS</code> columns <a class="L">L608–613</a>. <a href="example.html#swap">See it</a>. There are 4 such places in all; <a href="input.html#problems">the input page</a> lists them.</p>
+  </div>
+  <div class="callout decision">
+    <p><b>D2 · The reference is <a href="https://github.com/dbt-labs/jaffle-shop">dbt-labs/jaffle-shop</a></b>, not jaffle_shop_duckdb. The XML's 6 raw tables match it, and the demo README links it.</p>
+  </div>
+  <div class="callout decision">
+    <p><b>D3 · The workflow's command task holds a plaintext credential.</b> We never show, copy or commit it. The demo XML stays out of git.</p>
+  </div>
+
+  <h2>Open questions, now decided</h2>
+  <p>All 19 decisions were made on 21 Nov 2026; the full list is on the <a href="decisions.html">Decisions</a> page. The four questions below were among them.</p>
+  <div class="callout open">
+    <p><b>O1 · How do we run jaffle-shop on DuckDB?</b> Its <code>main</code> branch needs dbt 2.0 or newer, and its README doesn't list DuckDB. We tested three ways and all three built it (49 nodes passed). One has to be chosen.</p>
+    <p><b>Decided (Q1):</b> dbt 1.12 on the pinned commit 7d0d8de.</p>
+  </div>
+  <div class="callout open">
+    <p><b>O2 · One dbt model per PC Target?</b> This is the plan, because one model builds exactly one table. The staging mapping alone would give 6 models.</p>
+    <p><b>Decided (Q4):</b> yes, one model per PC Target, with shared boxes repeated.</p>
+  </div>
+  <div class="callout open">
+    <p><b>O3 · Load behaviour.</b> The session says <i>Truncate target table = NO</i> <a class="L">L919</a>, but every target's <a class="term" data-term="pre-sql">Pre SQL</a> empties it first, e.g. <code>TRUNCATE TABLE STG.STG_ORDERS</code> <a class="L">L541</a>. So PowerCenter fully reloads every table on each run, which is what a dbt <a class="term" data-term="materialization">table</a> does too.</p>
+    <p><b>Decided (Q9):</b> each model is a table, rebuilt on every run.</p>
+    <p class="small muted">Corrected on 21 Nov 2026: this first said PowerCenter adds rows on every run. That missed the Pre SQL.</p>
+  </div>
+  <div class="callout open">
+    <p><b>O4 · Folder layout of the generated models, and which language the converter is written in.</b></p>
+    <p><b>Decided (Q2, Q8):</b> Python with pytest, and one folder per mapping.</p>
+  </div>
+
+  <footer class="page-foot">Sources: the assignment brief, <a href="https://github.com/infinitelambda/flowline-pwc-demo">flowline-pwc-demo</a>, and <a href="https://github.com/dbt-labs/jaffle-shop">dbt-labs/jaffle-shop</a>. Last updated 2026-11-21.</footer>
+</main>
+</body>
+</html>

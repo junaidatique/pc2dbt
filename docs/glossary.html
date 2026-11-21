@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Glossary</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/glossary-data.js"></script>
+<script src="assets/site.js"></script>
+<style>
+  .g-list { display: grid; gap: 10px; margin-top: 12px; }
+  .g-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; border-left: 4px solid var(--border); }
+  .g-item.PowerCenter { border-left-color: var(--input); }
+  .g-item.dbt { border-left-color: var(--output); }
+  .g-item.ours { border-left-color: var(--convert); }
+  .g-item:target { box-shadow: 0 0 0 3px var(--convert); }
+  .g-item h3 { margin: 0 0 4px; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+  .g-item p { margin: 4px 0; max-width: 820px; }
+  .g-item .lab { color: var(--muted); font-size: 13px; font-weight: 600; margin-right: 6px; }
+  .g-item .avoid { color: var(--warn); }
+  .g-count { color: var(--muted); font-size: 14px; margin-left: 4px; }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="inner">
+  <a class="brand" href="index.html">PowerCenter → dbt <span>explainer</span></a>
+  <nav class="site-nav" id="site-nav" aria-label="Sections"></nav>
+</div></header>
+
+<main>
+  <h1>Glossary</h1>
+  <p class="lead">Our shared language. One word per idea, used the same way in code, tests, the README and our chats. This is what domain-driven design calls a ubiquitous language.</p>
+
+  <div class="callout warn">
+    <p><b>Words that clash.</b> PowerCenter and dbt use some of the same words for different things. Say which side you mean every time:</p>
+    <p><b>Source:</b> say PC Source or dbt source. <b>Target:</b> say PC Target; in dbt, a target is an environment like dev. <b>Expression:</b> say Expression transformation (the box) or port expression (the formula). <b>Test:</b> say data test (dbt) or unit test (ours). <b>Link:</b> only between workflow tasks; between ports it's a connector.</p>
+  </div>
+
+  <h2 id="terms">Terms</h2>
+  <input class="search" id="q" type="search" placeholder="Search terms, e.g. join, source, flag" aria-label="Search the glossary">
+  <div class="chips" id="groups" role="group" aria-label="Filter by side"></div>
+  <div class="g-list" id="list"></div>
+
+  <h2 id="tables">Tables at a glance</h2>
+  <p>The pipeline runs in layers: raw → staging → marts. Each table in the XML, which mapping writes it, and its twin in the reference project. Note that raw <i>stores</i> become <i>locations</i> from staging onwards.</p>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Table in the XML</th><th>Defined at</th><th>Written by</th><th>jaffle-shop twin</th></tr></thead>
+      <tbody>
+        <tr class="group"><td colspan="4">Raw: the input data. PC Sources only, nothing writes them.</td></tr>
+        <tr><td>RAW_CUSTOMERS</td><td><a class="L">L40</a></td><td>(seed data)</td><td>raw_customers</td></tr>
+        <tr><td>RAW_ORDERS</td><td><a class="L">L26</a></td><td>(seed data)</td><td>raw_orders</td></tr>
+        <tr><td>RAW_ITEMS</td><td><a class="L">L35</a></td><td>(seed data)</td><td>raw_items</td></tr>
+        <tr><td>RAW_PRODUCTS</td><td><a class="L">L19</a></td><td>(seed data)</td><td>raw_products</td></tr>
+        <tr><td>RAW_STORES</td><td><a class="L">L13</a></td><td>(seed data)</td><td>raw_stores</td></tr>
+        <tr><td>RAW_SUPPLIES</td><td><a class="L">L6</a></td><td>(seed data)</td><td>raw_supplies</td></tr>
+        <tr class="group"><td colspan="4">Staging: cleaned and renamed. Each is a PC Target here and a PC Source in the mart mappings.</td></tr>
+        <tr><td>STG_CUSTOMERS</td><td><a class="L">L86</a></td><td>m_FL_JS_STAGING_FULL</td><td>stg_customers</td></tr>
+        <tr><td>STG_ORDERS</td><td><a class="L">L67</a></td><td>m_FL_JS_STAGING_FULL</td><td>stg_orders</td></tr>
+        <tr><td>STG_ORDER_ITEMS</td><td><a class="L">L62</a></td><td>m_FL_JS_STAGING_FULL</td><td>stg_order_items</td></tr>
+        <tr><td>STG_PRODUCTS</td><td><a class="L">L52</a></td><td>m_FL_JS_STAGING_FULL</td><td>stg_products</td></tr>
+        <tr><td>STG_SUPPLIES</td><td><a class="L">L44</a></td><td>m_FL_JS_STAGING_FULL</td><td>stg_supplies</td></tr>
+        <tr><td>STG_LOCATIONS</td><td><a class="L">L79</a></td><td>m_FL_JS_STAGING_FULL</td><td>stg_locations (from raw_stores)</td></tr>
+        <tr class="group"><td colspan="4">Core marts: the business tables.</td></tr>
+        <tr><td>CUSTOMERS</td><td><a class="L">L1199</a></td><td>m_FL_JS_MARTS_CORE</td><td>customers</td></tr>
+        <tr><td>ORDERS</td><td><a class="L">L1185</a></td><td>m_FL_JS_MARTS_CORE</td><td>orders</td></tr>
+        <tr><td>ORDER_ITEMS</td><td><a class="L">L1172</a></td><td>m_FL_JS_MARTS_CORE</td><td>order_items</td></tr>
+        <tr><td>PRODUCTS</td><td><a class="L">L1162</a></td><td>m_FL_JS_MARTS_CORE</td><td>products</td></tr>
+        <tr><td>SUPPLIES</td><td><a class="L">L1154</a></td><td>m_FL_JS_MARTS_CORE</td><td>supplies</td></tr>
+        <tr class="group"><td colspan="4">Enriched marts: extra tables. No twin, so check 3 can't cover them.</td></tr>
+        <tr><td>CUSTOMER_360</td><td><a class="L">L1133</a></td><td>m_FL_JS_MARTS_ENRICHED</td><td class="muted">none</td></tr>
+        <tr><td>ORDER_FINANCIALS</td><td><a class="L">L1112</a></td><td>m_FL_JS_MARTS_ENRICHED</td><td class="muted">none</td></tr>
+        <tr><td>ORDER_ITEM_ENRICHED</td><td><a class="L">L1089</a></td><td>m_FL_JS_MARTS_ENRICHED</td><td class="muted">none</td></tr>
+        <tr><td>PRODUCT_DAILY_PERFORMANCE</td><td><a class="L">L1077</a></td><td>m_FL_JS_MARTS_ENRICHED</td><td class="muted">none</td></tr>
+        <tr><td>STORE_DAILY_KPIS</td><td><a class="L">L1060</a></td><td>m_FL_JS_MARTS_ENRICHED</td><td class="muted">none</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted">Both mart mappings read the STG_ tables. The enriched mapping does not read the core marts. jaffle-shop also has <code>locations</code> and <code>metricflow_time_spine</code> marts, which the XML doesn't have.</p>
+
+  <footer class="page-foot">Terms live in <code>assets/glossary-data.js</code>. Add a term there and it shows up here and in every page's hover cards.</footer>
+</main>
+
+<script>
+(function () {
+  var GROUPS = [
+    { key: "all", label: "All" },
+    { key: "PowerCenter", label: "PowerCenter (input)", cls: "PowerCenter" },
+    { key: "dbt & SQL", label: "dbt & SQL (output)", cls: "dbt" },
+    { key: "Our converter", label: "Our converter", cls: "ours" }
+  ];
+  var active = "all";
+  var list = document.getElementById("list");
+  var q = document.getElementById("q");
+  var chips = document.getElementById("groups");
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function line(label, text, cls) {
+    var p = el("p", cls || "");
+    p.appendChild(el("span", "lab", label));
+    p.appendChild(Site.textWithLines(text));
+    return p;
+  }
+
+  function render() {
+    var term = q.value.trim().toLowerCase();
+    list.innerHTML = "";
+    var shown = 0;
+    window.GLOSSARY.forEach(function (g) {
+      if (active !== "all" && g.group !== active) return;
+      var hay = [g.term, g.def, g.more, g.becomes, g.xml, g.avoid].join(" ").toLowerCase();
+      if (term && hay.indexOf(term) < 0) return;
+      var grp = GROUPS.filter(function (x) { return x.key === g.group; })[0];
+      var item = el("article", "g-item " + grp.cls);
+      item.id = g.id;
+      var h = el("h3");
+      h.appendChild(el("span", "", g.term));
+      h.appendChild(el("span", "tag " + (grp.cls === "PowerCenter" ? "input" : grp.cls === "dbt" ? "output" : "convert"), g.group));
+      item.appendChild(h);
+      item.appendChild(el("p", "", g.def));
+      if (g.more) item.appendChild(el("p", "muted", g.more));
+      if (g.becomes) item.appendChild(line("Becomes", g.becomes));
+      if (g.xml) item.appendChild(line("In the XML", g.xml));
+      if (g.avoid) item.appendChild(line("Watch", g.avoid, "avoid"));
+      list.appendChild(item);
+      shown++;
+    });
+    if (!shown) list.appendChild(el("p", "muted", "No term matches."));
+  }
+
+  GROUPS.forEach(function (g) {
+    var b = el("button", "", g.label);
+    b.type = "button";
+    b.setAttribute("aria-pressed", g.key === active ? "true" : "false");
+    if (g.key !== "all") {
+      var n = window.GLOSSARY.filter(function (x) { return x.group === g.key; }).length;
+      b.appendChild(el("span", "g-count", String(n)));
+    }
+    b.addEventListener("click", function () {
+      active = g.key;
+      chips.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+      render();
+    });
+    chips.appendChild(b);
+  });
+  q.addEventListener("input", render);
+  render();
+  if (location.hash) {
+    var t = document.getElementById(location.hash.slice(1));
+    if (t) t.scrollIntoView({ block: "center" });
+  }
+})();
+</script>
+</body>
+</html>

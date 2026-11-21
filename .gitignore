@@ -1,0 +1,22 @@
+# Third-party clones (demo XML, jaffle-shop reference). Never commit these.
+# The demo XML also contains a plaintext credential, another reason it stays out.
+external/
+
+# Python / tooling
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# dbt build output
+target/
+dbt_packages/
+logs/
+*.duckdb
+*.duckdb.wal
+
+# Local editor / OS / agent files
+.DS_Store
+.idea/
+.vscode/
+.claude/settings.local.json

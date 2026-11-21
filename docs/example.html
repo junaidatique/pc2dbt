@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Mapping, End to End</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/glossary-data.js"></script>
+<script src="assets/example-data.js"></script>
+<script src="assets/site.js"></script>
+</head>
+<body>
+<header class="site-header"><div class="inner">
+  <a class="brand" href="index.html">PowerCenter → dbt <span>explainer</span></a>
+  <nav class="site-nav" id="site-nav" aria-label="Sections"></nav>
+</div></header>
+
+<main>
+  <h1>One mapping, end to end</h1>
+  <p class="lead">We follow one small path through the XML: raw orders in, <code>STG_ORDERS</code> out. It is short, but it touches every piece: a PC Source, three kinds of box, a PC Target, and the session and workflow that run it.</p>
+  <div class="callout">
+    <p>The path lives inside mapping <code>m_FL_JS_STAGING_FULL</code> <a class="L">L90</a>, which writes 6 PC Targets. Here we look at the orders path only. All XML on this page was pulled from the file by a script. Attributes are trimmed to the ones that matter, and line numbers open GitHub.</p>
+  </div>
+
+  <!-- ============ 1. who runs it ============ -->
+  <h2>1 · Who runs it: workflow and session</h2>
+  <p>The <a class="term" data-term="workflow">workflow</a> runs tasks in order. Each <a class="term" data-term="session">session</a> runs one mapping. Our path sits in the first session.</p>
+  <figure>
+    <div class="flow tight" role="img" aria-label="Workflow order: Start, then the staging session, then the core marts session, then the enriched marts session, then a command task.">
+      <div class="flow-node dim"><span class="t">Start</span><span class="s"><a class="L">L4578</a></span></div>
+      <div class="flow-arrow"><a class="L">L4623</a></div>
+      <div class="flow-node hot"><span class="t">s_FL_JS_STAGING_FULL</span><span class="s">runs m_FL_JS_STAGING_FULL. <b>Our path is here.</b></span></div>
+      <div class="flow-arrow"><a class="L">L4624</a></div>
+      <div class="flow-node dim"><span class="t">s_FL_JS_MARTS_CORE</span><span class="s">core marts</span></div>
+      <div class="flow-arrow"><a class="L">L4625</a></div>
+      <div class="flow-node dim"><span class="t">s_FL_JS_MARTS_ENRICHED</span><span class="s">enriched marts</span></div>
+      <div class="flow-arrow"><a class="L">L4622</a></div>
+      <div class="flow-node dim"><span class="t">cmd_FL_JS_CREATE_RPT_VIEWS</span><span class="s"><a class="term" data-term="command-task">command task</a>, name only</span></div>
+    </div>
+    <figcaption>Workflow <code>wf_FL_JAFFLESHOP_DEMO</code> <a class="L">L4054</a> runs on demand <a class="L">L4056</a>. Each arrow is a <a class="term" data-term="workflow-link">workflow link</a>. The command task's command contains a credential, so we only show its name.</figcaption>
+  </figure>
+
+  <h3>What the session adds</h3>
+  <dl class="kv">
+    <dt>Runs mapping</dt><dd><code>m_FL_JS_STAGING_FULL</code> <a class="L">L811</a></dd>
+    <dt>Writes STG_ORDERS through</dt><dd>connection <code>STG_Jaffleshop</code> <a class="L">L4587</a>. The session itself says <code>MART_Jaffleshop</code> <a class="L">L912</a>, but the workflow's <a class="term" data-term="task-instance">task instance</a> overrides it, and the override wins. (Only names; the details live outside the file.)</dd>
+    <dt>Load type</dt><dd>Bulk <a class="L">L913</a></dd>
+    <dt>Truncate target first?</dt><dd>The session option says NO <a class="L">L919</a>, but the target's <a class="term" data-term="pre-sql">Pre SQL</a> empties it anyway: <code>TRUNCATE TABLE STG.STG_ORDERS</code> <a class="L">L541</a>. So every run is a full reload.</dd>
+    <dt>Treat source rows as</dt><dd>Insert <a class="L">L995</a></dd>
+  </dl>
+  <p class="small muted">None of this changes <em>what</em> is computed. It is about <em>how</em> rows are written. dbt handles that with <a class="term" data-term="materialization">materialization</a>, which is still an open question.</p>
+
+  <div class="tabs-group">
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-controls="tab-wf" type="button">Workflow XML</button>
+      <button role="tab" aria-controls="tab-sess" type="button">Session XML</button>
+    </div>
+    <div class="tab-panel" id="tab-wf" role="tabpanel"><pre id="code-wf"></pre></div>
+    <div class="tab-panel" id="tab-sess" role="tabpanel"><pre id="code-sess"></pre></div>
+  </div>
+
+  <!-- ============ 2. the mapping path ============ -->
+  <h2>2 · The mapping path: click a box</h2>
+  <p>Five <a class="term" data-term="instance">instances</a> joined by <a class="term" data-term="connector">connectors</a>. The number on each arrow is how many connectors run between the two boxes.</p>
+  <div class="flow tight" id="path"></div>
+  <div class="panel" id="node-panel" aria-live="polite"></div>
+
+  <!-- ============ 3. the swap ============ -->
+  <h2 id="swap">3 · Follow the connectors, not the names</h2>
+  <p>The last hop, from the Sorter into the PC Target, is where names and connectors disagree. Toggle the view to see it.</p>
+  <div class="chips" role="group" aria-label="Order of the right-hand column">
+    <button type="button" id="mode-xml" aria-pressed="true">As in the XML</button>
+    <button type="button" id="mode-name" aria-pressed="false">Lined up by name</button>
+  </div>
+  <figure>
+    <svg class="diagram" id="swap-svg" role="img" aria-label="Ten connectors from SRT_ORDERS to STG_ORDERS. Six connect ports to columns with different names: dollar values go into the cents columns and cents go into the dollar columns."></svg>
+    <figcaption id="swap-cap"></figcaption>
+  </figure>
+  <div class="callout warn">
+    <p><b>What we do:</b> the SQL copies the connectors exactly, so <code>subtotal_cents</code> really holds dollars, and every one of these columns gets a <a class="term" data-term="flag">flag</a>. This is decision D1: we copy the XML, we don't fix it.</p>
+  </div>
+
+  <!-- ============ 4. output ============ -->
+  <h2 id="output">4 · The output: what the converter should write</h2>
+  <p>Hand-written for now, to show the target. Each box becomes one <a class="term" data-term="cte">CTE</a>, the Sorter disappears, and the final <code>select</code> copies the connectors, flags included.</p>
+  <div class="tabs-group">
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-controls="tab-sql" type="button">models/staging/stg_orders.sql</button>
+      <button role="tab" aria-controls="tab-yml" type="button">models/staging/sources.yml</button>
+    </div>
+    <div class="tab-panel" id="tab-sql" role="tabpanel">
+<pre class="code plain"><span class="cm">-- Generated from mapping m_FL_JS_STAGING_FULL, PC Target STG_ORDERS</span>
+<span class="cm">-- Path: RAW_ORDERS → SQ_RAW_ORDERS → EXP_ORDERS → SRT_ORDERS → STG_ORDERS</span>
+
+with sq_raw_orders as (
+    <span class="cm">-- Source Qualifier SQ_RAW_ORDERS (XML L161–180): no override, no filter</span>
+    select id, customer, ordered_at, store_id, subtotal, tax_paid, order_total
+    from {{ source('raw', 'raw_orders') }}
+),
+
+exp_orders as (
+    <span class="cm">-- Expression EXP_ORDERS (XML L106–125)</span>
+    select
+        id                            as order_id,
+        customer                      as customer_id,
+        store_id                      as location_id,
+        date_trunc('day', ordered_at) as ordered_at_day,
+        subtotal / 100                as subtotal,
+        tax_paid / 100                as tax_paid,
+        order_total / 100             as order_total,
+        subtotal                      as subtotal_cents,
+        tax_paid                      as tax_paid_cents,
+        order_total                   as order_total_cents
+    from sq_raw_orders
+)
+
+<span class="cm">-- Sorter SRT_ORDERS (XML L513–533) dropped: row order has no meaning in a table.</span>
+
+select
+    order_id,
+    customer_id,
+    location_id,
+    ordered_at_day,
+    subtotal          as subtotal_cents,     <span class="flagtxt">-- FLAG: dollars into a *_CENTS column (XML L608)</span>
+    tax_paid          as tax_paid_cents,     <span class="flagtxt">-- FLAG: XML L609</span>
+    order_total       as order_total_cents,  <span class="flagtxt">-- FLAG: XML L610</span>
+    subtotal_cents    as subtotal,           <span class="flagtxt">-- FLAG: cents into a dollar column (XML L611)</span>
+    tax_paid_cents    as tax_paid,           <span class="flagtxt">-- FLAG: XML L612</span>
+    order_total_cents as order_total         <span class="flagtxt">-- FLAG: XML L613</span>
+from exp_orders</pre>
+    </div>
+    <div class="tab-panel" id="tab-yml" role="tabpanel">
+<pre class="code plain">version: 2
+
+sources:
+  - name: raw                 <span class="cm"># from PC Source OWNERNAME="RAW" (XML L26)</span>
+    schema: raw
+    tables:
+      - name: raw_orders      <span class="cm"># from PC Source NAME="RAW_ORDERS" (XML L26)</span>
+        columns:
+          - name: id
+          - name: customer
+          - name: ordered_at
+          - name: store_id
+          - name: subtotal
+          - name: tax_paid
+          - name: order_total</pre>
+    </div>
+  </div>
+  <p class="small muted">The folder name <code>staging/</code> is a placeholder; folder layout is still open.</p>
+
+  <h3>Does it run? One real row</h3>
+  <p>We ran the SQL above in DuckDB on jaffle-shop's seed data, next to the reference model. Both return 61,948 rows. Here is the first order:</p>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Column</th><th>raw_orders.csv</th><th>Our stg_orders</th><th>Reference stg_orders</th></tr></thead>
+      <tbody>
+        <tr><td>order_id</td><td class="mono">9bed808a-…</td><td class="mono">9bed808a-…</td><td class="mono">9bed808a-…</td></tr>
+        <tr><td>ordered_at_day</td><td class="mono">2024-09-01T15:01:00</td><td class="mono">2024-09-01 00:00</td><td class="mono">2024-09-01 00:00 <span class="muted">(named ordered_at)</span></td></tr>
+        <tr class="flagged"><td>subtotal_cents</td><td class="mono">subtotal = 700</td><td class="mono">7.0</td><td class="mono">700</td></tr>
+        <tr class="flagged"><td>tax_paid_cents</td><td class="mono">tax_paid = 42</td><td class="mono">0.42</td><td class="mono">42</td></tr>
+        <tr class="flagged"><td>order_total_cents</td><td class="mono">order_total = 742</td><td class="mono">7.42</td><td class="mono">742</td></tr>
+        <tr class="flagged"><td>subtotal</td><td></td><td class="mono">700</td><td class="mono">7.00</td></tr>
+        <tr class="flagged"><td>tax_paid</td><td></td><td class="mono">42</td><td class="mono">0.42</td></tr>
+        <tr class="flagged"><td>order_total</td><td></td><td class="mono">742</td><td class="mono">7.42</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout open">
+    <p><b>Two lessons for check 3 (matching the reference):</b></p>
+    <p>1. A faithful converter will <em>not</em> match the reference on these 6 columns. That's expected, so the comparison has to know about flags.<br>
+    2. Column names differ too: <code>ordered_at_day</code> here (from the PC Target) and <code>ordered_at</code> in jaffle-shop. The comparison needs a column-name map.</p>
+  </div>
+
+  <p style="margin-top:28px"><a href="steps.html">Next: how the converter gets from the XML to this SQL, in five steps →</a></p>
+  <footer class="page-foot">Data: <code>assets/example-data.js</code>, generated from the XML. Row check run on 2026-11-21 against jaffle-shop seeds in DuckDB.</footer>
+</main>
+
+<script>
+(function () {
+  var E = window.EXAMPLE;
+  var byId = {};
+  E.nodes.forEach(function (n) { byId[n.id] = n; });
+
+  /* ---------- section 1: code tabs ---------- */
+  Site.renderCode(document.getElementById("code-wf"), E.workflow.lines);
+  Site.renderCode(document.getElementById("code-sess"), E.session.lines);
+
+  /* ---------- section 2: clickable path ---------- */
+  var INFO = {
+    RAW_ORDERS: { kind: "PC Source", term: "pc-source",
+      what: "Describes the raw orders table: 7 columns in schema RAW. It holds names and types only, no logic.",
+      sql: "Declared once in sources.yml, then read as {{ source('raw', 'raw_orders') }}." },
+    SQ_RAW_ORDERS: { kind: "Source Qualifier", term: "source-qualifier",
+      what: "Reads the 7 columns into the mapping. Its SQL override, filter and join settings are all empty, so it reads everything as is.",
+      sql: "The first CTE: select the 7 columns from the dbt source." },
+    EXP_ORDERS: { kind: "Expression transformation", term: "expression-tx",
+      what: "Renames 3 columns, keeps only the day of ORDERED_AT, divides the 3 money columns by 100, and also keeps the raw cent values. Its input ports end in _IN; connectors L647–649 feed them from SUBTOTAL, TAX_PAID and ORDER_TOTAL.",
+      sql: "A CTE with one column per output port: renames, date_trunc, and / 100." },
+    SRT_ORDERS: { kind: "Sorter", term: "sorter",
+      what: "Sorts the rows by ORDER_ID, the only port with ISSORTKEY=YES. Distinct is NO, so no rows are removed.",
+      sql: "Nothing. Row order has no meaning in a table, so the converter drops it and leaves a comment." },
+    STG_ORDERS: { kind: "PC Target", term: "pc-target",
+      what: "The table this path writes, with 10 columns. Look at the incoming connectors: in 6 of them the names don't match.",
+      sql: "The final select. The model file is stg_orders.sql." }
+  };
+
+  var path = document.getElementById("path");
+  var panel = document.getElementById("node-panel");
+  var buttons = [];
+  E.nodes.forEach(function (n, i) {
+    if (i > 0) {
+      var w = E.wireCounts[i - 1];
+      var arrow = document.createElement("div");
+      arrow.className = "flow-arrow";
+      arrow.textContent = w.count + " connectors";
+      path.appendChild(arrow);
+    }
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "flow-node " + (i === 0 ? "input" : i === E.nodes.length - 1 ? "output" : "");
+    b.setAttribute("aria-pressed", "false");
+    var t = document.createElement("span"); t.className = "t"; t.textContent = n.id;
+    var s = document.createElement("span"); s.className = "s"; s.textContent = INFO[n.id].kind;
+    b.appendChild(t); b.appendChild(s);
+    b.addEventListener("click", function () { select(n.id); });
+    path.appendChild(b);
+    buttons.push([n.id, b]);
+  });
+  Site.breakAtUnderscores(path);
+
+  function h(tag, text, cls) { var e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; }
+
+  function select(id) {
+    buttons.forEach(function (p) { p[1].setAttribute("aria-pressed", p[0] === id ? "true" : "false"); });
+    var n = byId[id], info = INFO[id];
+    panel.innerHTML = "";
+    var title = h("h3");
+    title.appendChild(document.createTextNode(n.id + " "));
+    var tag = h("a", info.kind, "tag");
+    tag.href = "glossary.html#" + info.term;
+    title.appendChild(tag);
+    panel.appendChild(title);
+    var p1 = h("p"); p1.appendChild(Site.textWithLines(info.what)); panel.appendChild(p1);
+    var p2 = h("p"); p2.appendChild(h("b", "In SQL: ")); p2.appendChild(document.createTextNode(info.sql)); panel.appendChild(p2);
+
+    panel.appendChild(h("h4", "Definition in the XML", "muted small"));
+    var pre = h("pre"); Site.renderCode(pre, n.lines); panel.appendChild(pre);
+
+    if (n.wiresIn.length) {
+      panel.appendChild(h("h4", "Connectors coming in (" + n.wiresIn.filter(function (r) { return r[0] != null; }).length + ")", "muted small"));
+      var flagged = E.flags.map(function (f) { return f.n; });
+      var pre2 = h("pre"); Site.renderCode(pre2, n.wiresIn, { highlight: flagged }); panel.appendChild(pre2);
+    } else {
+      panel.appendChild(h("p", "No connectors come in: this is where data enters the mapping.", "small muted"));
+    }
+    var foot = h("p", null, "small muted");
+    foot.appendChild(Site.textWithLines("Placed in the mapping as an instance at L" + n.instanceLine + "."));
+    panel.appendChild(foot);
+  }
+  select("EXP_ORDERS");
+
+  /* ---------- section 3: swap diagram ---------- */
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var srt = byId.SRT_ORDERS.lines.filter(function (r) { return /^<TRANSFORMFIELD/.test(r[1]); })
+    .map(function (r) { return r[1].match(/NAME="([^"]+)"/)[1]; });
+  var tgt = E.targetColumns.slice();
+  var wires = byId.STG_ORDERS.wiresIn.filter(function (r) { return r[0] != null; }).map(function (r) {
+    var a = {}; r[1].replace(/(\w+)="([^"]*)"/g, function (_, k, v) { a[k] = v; });
+    return { n: r[0], from: a.FROMFIELD, to: a.TOFIELD, bad: a.FROMFIELD !== a.TOFIELD };
+  });
+
+  function svgEl(tag, attrs, text) {
+    var e = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function drawSwap(mode) {
+    var svg = document.getElementById("swap-svg");
+    var right = mode === "name" ? srt.slice() : tgt;   // by name: put each column opposite the port with the same name
+    var ROW = 26, TOP = 44, LX = 172, RX = 292;
+    var H = TOP + right.length * ROW;
+    svg.setAttribute("viewBox", "0 0 470 " + H);
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.appendChild(svgEl("text", { x: LX, y: 18, "text-anchor": "end", "class": "hdr" }, "SRT_ORDERS ports"));
+    svg.appendChild(svgEl("text", { x: RX, y: 18, "text-anchor": "start", "class": "hdr" }, "STG_ORDERS columns"));
+    var badFrom = {}, badTo = {};
+    wires.forEach(function (w) { if (w.bad) { badFrom[w.from] = 1; badTo[w.to] = 1; } });
+    srt.forEach(function (p, i) {
+      var y = TOP + i * ROW;
+      svg.appendChild(svgEl("text", { x: LX - 10, y: y + 4, "text-anchor": "end", "class": badFrom[p] ? "flag" : "" }, p));
+      svg.appendChild(svgEl("circle", { cx: LX, cy: y, r: 3, "class": "dot" + (badFrom[p] ? " flag" : "") }));
+    });
+    right.forEach(function (c, i) {
+      var y = TOP + i * ROW;
+      svg.appendChild(svgEl("text", { x: RX + 10, y: y + 4, "text-anchor": "start", "class": badTo[c] ? "flag" : "" }, c));
+      svg.appendChild(svgEl("circle", { cx: RX, cy: y, r: 3, "class": "dot" + (badTo[c] ? " flag" : "") }));
+    });
+    wires.forEach(function (w) {
+      var y1 = TOP + srt.indexOf(w.from) * ROW, y2 = TOP + right.indexOf(w.to) * ROW, mx = (LX + RX) / 2;
+      svg.appendChild(svgEl("path", { d: "M" + LX + "," + y1 + " C" + mx + "," + y1 + " " + mx + "," + y2 + " " + RX + "," + y2, "class": "wire" + (w.bad ? " flag" : "") }));
+    });
+    var cap = document.getElementById("swap-cap");
+    cap.innerHTML = "";
+    cap.appendChild(Site.textWithLines(mode === "name"
+      ? "Lined up by name, 6 connectors cross over: SUBTOTAL (dollars) feeds SUBTOTAL_CENTS, and SUBTOTAL_CENTS (cents) feeds SUBTOTAL. Same for TAX_PAID and ORDER_TOTAL. Connectors L608–613."
+      : "In the file's own order, every connector goes straight across: port 5 to column 5, and so on. But the PC Target lists the *_CENTS columns first, so 6 names don't match (red). It looks like the ports were joined by position, not by name. Connectors L604–613."));
+  }
+  var bx = document.getElementById("mode-xml"), bn = document.getElementById("mode-name");
+  bx.addEventListener("click", function () { bx.setAttribute("aria-pressed", "true"); bn.setAttribute("aria-pressed", "false"); drawSwap("xml"); });
+  bn.addEventListener("click", function () { bn.setAttribute("aria-pressed", "true"); bx.setAttribute("aria-pressed", "false"); drawSwap("name"); });
+  drawSwap("xml");
+})();
+</script>
+</body>
+</html>

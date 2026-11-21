@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Input XML</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/glossary-data.js"></script>
+<script src="assets/input-data.js"></script>
+<script src="assets/site.js"></script>
+<style>
+  /* File map: every segment is input, so it uses the input colour at different strengths. */
+  .filemap { display: flex; height: 44px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin: 12px 0 6px; }
+  .filemap button { border: 0; border-right: 1px solid var(--bg); padding: 0 6px; min-width: 3px; font: inherit; font-size: 12px;
+                    color: var(--text); text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
+  .filemap button:last-child { border-right: 0; }
+  .filemap button:hover, .filemap button:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+  .k-def { background: var(--input-soft); }
+  .k-map { background: var(--input); color: var(--bg) !important; font-weight: 600; }
+  .k-run { background: color-mix(in srgb, var(--input) 45%, var(--input-soft)); }
+  .filemap-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .seglist { list-style: none; padding: 0; margin: 12px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 4px 18px; font-size: 14px; }
+  .seglist button { font: inherit; background: none; border: 0; padding: 2px 0; color: var(--link); cursor: pointer; text-align: left; }
+  .seglist .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: baseline; border: 1px solid var(--border); }
+  .seglist .muted { font-variant-numeric: tabular-nums; }
+
+  /* Accordion tree */
+  .tree-tools { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+  .tree-tools button { font: inherit; font-size: 14px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border);
+                       background: var(--surface); color: var(--text); cursor: pointer; }
+  .tree details { border-left: 2px solid var(--border); margin: 0 0 0 4px; padding-left: 12px; }
+  .tree > details, #n-repository, #n-folder { border-left: 0; margin-left: 0; padding-left: 0; }
+  #n-powermart > .body, #n-repository > .body { padding-left: 0; }
+  .tree details, .problem { scroll-margin-top: 170px; }
+  .tree summary { list-style: none; cursor: pointer; padding: 6px 8px; border-radius: 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+  .tree summary::-webkit-details-marker { display: none; }
+  .tree summary::before { content: "▸"; color: var(--muted); width: 12px; flex: 0 0 12px; transition: transform .12s; }
+  .tree details[open] > summary::before { transform: rotate(90deg); }
+  .tree summary:hover { background: var(--surface-2); }
+  .tree .leaf > summary::before { content: "•"; transform: none; }
+  .tree .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .02em; color: var(--input); background: var(--input-soft);
+               padding: 1px 6px; border-radius: 4px; text-transform: none; }
+  .tree .nm { font-weight: 650; overflow-wrap: anywhere; }
+  .tree .grp > summary .nm { font-weight: 700; }
+  .tree .chip { font-size: 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; white-space: nowrap; }
+  .tree .flagcount { font-size: 12px; font-weight: 700; color: var(--warn); background: var(--warn-soft); border-radius: 999px; padding: 0 7px; white-space: nowrap; }
+  .tree .body { padding: 2px 8px 10px 22px; }
+  .tree .body > p { margin: 4px 0 8px; max-width: 760px; }
+  .tree .gl { font-size: 13px; color: var(--muted); }
+  .tree .kv { margin: 6px 0 10px; }
+  .tree .flash > summary { box-shadow: 0 0 0 3px var(--warn); }
+  .tree .ptable { margin: 8px 0 12px; max-height: 420px; overflow: auto; }
+  .tree .ptable td.expr { font-family: var(--mono); font-size: 12.5px; min-width: 220px; }
+  .tree .ptable td:first-child { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+  .tree .flagged-here { margin: 6px 0 10px; font-size: 14px; }
+  .tree .flagged-here button { font: inherit; background: none; border: 0; padding: 0; color: var(--warn); text-decoration: underline; cursor: pointer; }
+
+  /* Problems */
+  .sev-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 14px 0; }
+  .sev-stats button { text-align: left; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border);
+                      border-radius: var(--radius); padding: 10px 14px; cursor: pointer; }
+  .sev-stats button[aria-pressed="true"] { border-color: var(--text); box-shadow: 0 0 0 1px var(--text); }
+  .sev-stats b { display: block; font-size: 26px; line-height: 1.1; }
+  .sev-stats span { color: var(--muted); font-size: 13px; }
+  .problem { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: var(--radius);
+             padding: 12px 16px; margin: 10px 0; max-width: 860px; }
+  .problem.wrong, .problem.security { border-left-color: var(--warn); }
+  .problem h3 { margin: 2px 0 6px; font-size: 17px; }
+  .problem p { margin: 6px 0; }
+  .problem ul { margin: 6px 0; padding-left: 20px; }
+  .problem .sevtag { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .problem.wrong .sevtag, .problem.security .sevtag { color: var(--warn); }
+  .problem .foundby { margin-left: 8px; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px;
+                      background: var(--text); color: var(--bg); }
+  .problem .foundby.review { background: transparent; color: var(--text); border: 1px solid var(--text); }
+  .problem .bynote { font-size: 14px; color: var(--muted); margin-top: 0; }
+  .problem .earlier { font-size: 14px; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 6px; margin-top: 8px; }
+  .problem .open-q { font-size: 14px; background: var(--convert-soft); border-radius: 6px; padding: 6px 10px; }
+  .problem .goto { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .problem .goto button { font: inherit; font-size: 13px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--border);
+                          background: var(--surface-2); color: var(--text); cursor: pointer; }
+  .problem details.cols summary { cursor: pointer; color: var(--link); font-size: 14px; }
+  .problem details.cols ul { font-size: 13px; }
+  ul.clean { padding-left: 0; list-style: none; }
+  ul.clean li::before { content: "✓ "; font-weight: 700; color: var(--output); }
+  @media (max-width: 640px) {
+    .tree .body { padding-left: 4px; padding-right: 0; }
+    .tree details { padding-left: 6px; margin-left: 2px; }
+    .tree summary { padding: 6px 4px; }
+  }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="inner">
+  <a class="brand" href="index.html">PowerCenter → dbt <span>explainer</span></a>
+  <nav class="site-nav" id="site-nav" aria-label="Sections"></nav>
+</div></header>
+
+<main>
+  <h1>The input XML</h1>
+  <p class="lead">What's inside <code>FLOWLINE_DEMO_JAFFLESHOP.xml</code>, level by level, and the problems we found in it.</p>
+
+  <div class="callout decision">
+    <p><b>Your summary is right.</b> PowerCenter reads data from <a class="term" data-term="pc-source">PC Sources</a>, a <a class="term" data-term="mapping">mapping</a> applies <a class="term" data-term="transformation">transformations</a>, and the result is written to <a class="term" data-term="pc-target">PC Targets</a>. Three things to add:</p>
+    <ol>
+      <li><b>The XML doesn't run anything.</b> It is an <a class="term" data-term="export">export</a>, a saved copy of the design. The PowerCenter server is what runs it.</li>
+      <li><b>A mapping never runs on its own.</b> A <a class="term" data-term="session">session</a> runs it and says which database <a class="term" data-term="connection">connection</a> each table uses. The <a class="term" data-term="workflow">workflow</a> runs the sessions in order.</li>
+      <li><b>Sources and targets are descriptions, not data.</b> A staging target is described again as a source for the next mapping, so the 3 mappings form a chain: raw → staging → marts.</li>
+    </ol>
+  </div>
+
+  <h2 id="map">Where things are in the file</h2>
+  <p>Each block is a stretch of lines, drawn to scale. Click one to open it in the tree below.</p>
+  <div class="filemap" id="filemap" role="group" aria-label="The file's sections, to scale"></div>
+  <div class="filemap-scale"><span>L1</span><span id="lastline"></span></div>
+  <ul class="seglist" id="seglist"></ul>
+
+  <h2 id="tree">What's inside, level by level</h2>
+  <p>Open any row. Every row shows its lines in the XML; tables come straight from the file. A red count means problems below that row.</p>
+  <div class="tree-tools">
+    <button type="button" id="open-main">Open the main levels</button>
+    <button type="button" id="open-all">Open everything</button>
+    <button type="button" id="close-all">Close everything</button>
+  </div>
+  <div class="tree" id="tree-root"></div>
+
+  <h2 id="problems">Problems in the input</h2>
+  <p>Found with scripts that check every connector, port and setting, and confirmed against the jaffle-shop seed data where the data matters. You found 3 of them by reading the XML yourself, and an independent blind review found 6 more; both are marked. A separate checker re-ran every claim (prompt 7), and I re-checked everything the two reviewers reported before adding it. Click a box to filter.</p>
+  <p class="small muted">How PowerCenter behaves (port order, join types, NULL handling, overrides) comes from Informatica's documentation, not a running PowerCenter. The NULL claims assume the server's default setting for NULL comparisons.</p>
+  <div class="sev-stats" id="sev-stats" role="group" aria-label="Filter problems"></div>
+  <div id="problem-list"></div>
+
+  <h3 id="clean">Checked, and nothing wrong</h3>
+  <ul class="clean" id="clean-list"></ul>
+
+  <footer class="page-foot">Data: <code>assets/input-data.js</code>, generated from the XML by a script. Every fact in the problem texts is asserted against the file, so the script stops if one is false. Seed-data numbers come from jaffle-shop's seeds loaded in DuckDB on 2026-11-21. The command task's contents are never read into this page.</footer>
+</main>
+
+<script>
+(function () {
+  var D = window.INPUT;
+  function h(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function fmt(text) {
+    var out = document.createElement("span");
+    String(text).split(/(`[^`]+`)/).forEach(function (part) {
+      if (/^`[^`]+`$/.test(part)) { out.appendChild(h("code", null, part.slice(1, -1))); return; }
+      if (part) out.appendChild(Site.textWithLines(part));
+    });
+    return out;
+  }
+  function p(text, cls) { var e = h("p", cls); e.appendChild(fmt(text)); return e; }
+  function lineRef(lines) {
+    var a = h("a", "L", lines[0] === lines[1] ? "L" + lines[0] : "L" + lines[0] + "–" + lines[1]);
+    Site.linkLines(a.parentNode ? a.parentNode : (function () { var s = h("span"); s.appendChild(a); return s; })());
+    return a;
+  }
+
+  /* ---------- index the tree ---------- */
+  var byId = {}, parent = {};
+  (function index(n, par) {
+    byId[n.id] = n; parent[n.id] = par;
+    (n.kids || []).forEach(function (k) { index(k, n.id); });
+  })(D.tree, null);
+
+  /* problems per node, counted up the tree */
+  var flagsHere = {}, flagsBelow = {};
+  D.problems.forEach(function (pr) {
+    pr.nodes.forEach(function (id) {
+      if (!byId[id]) { console.warn("problem points at missing node", id); return; }
+      (flagsHere[id] = flagsHere[id] || []).push(pr);
+      var seen = {};
+      for (var cur = id; cur; cur = parent[cur]) {
+        if (seen[cur]) break; seen[cur] = 1;
+        flagsBelow[cur] = flagsBelow[cur] || {};
+        flagsBelow[cur][pr.id] = 1;
+      }
+    });
+  });
+
+  /* ---------- render one node (body filled lazily on first open) ---------- */
+  var els = {};
+  function render(n) {
+    var d = h("details", (n.group ? "grp" : "") + (!n.kids && !n.table && !n.facts ? " leaf" : ""));
+    d.id = "n-" + n.id;
+    var s = h("summary");
+    if (n.tag) s.appendChild(h("span", "tag", n.tag));
+    s.appendChild(h("span", "nm", n.name));
+    (n.chips || []).forEach(function (c) { s.appendChild(h("span", "chip", c)); });
+    var fb = flagsBelow[n.id] ? Object.keys(flagsBelow[n.id]).length : 0;
+    if (fb) { var f = h("span", "flagcount", "⚠ " + fb); f.title = fb + (fb === 1 ? " problem" : " problems") + " here or below"; s.appendChild(f); }
+    if (n.lines) { var w = h("span"); w.appendChild(lineRef(n.lines)); s.appendChild(w); }
+    d.appendChild(s);
+    d.addEventListener("toggle", function () { if (d.open) fill(d, n); });
+    els[n.id] = d;
+    return d;
+  }
+  function fill(d, n) {
+    if (d.dataset.filled) return;
+    d.dataset.filled = "1";
+    var b = h("div", "body");
+    if (n.what) b.appendChild(p(n.what));
+    if (n.term) {
+      var gl = h("p", "gl"); gl.appendChild(document.createTextNode("Glossary: "));
+      var g = (window.GLOSSARY || []).filter(function (x) { return x.id === n.term; })[0];
+      var a = h("a", "term", g ? g.term : n.term); a.dataset.term = n.term; gl.appendChild(a);
+      b.appendChild(gl); Site.linkTerms(gl);
+    }
+    if (flagsHere[n.id]) {
+      var fh = h("p", "flagged-here"); fh.appendChild(document.createTextNode("⚠ Problems here: "));
+      flagsHere[n.id].forEach(function (pr, i) {
+        if (i) fh.appendChild(document.createTextNode(" · "));
+        var btn = h("button", null, pr.title); btn.type = "button";
+        btn.addEventListener("click", function () { showProblem(pr.id); });
+        fh.appendChild(btn);
+      });
+      b.appendChild(fh);
+    }
+    if (n.facts) {
+      var dl = h("dl", "kv");
+      n.facts.forEach(function (kv) { dl.appendChild(h("dt", null, kv[0])); var dd = h("dd"); dd.appendChild(fmt(kv[1])); dl.appendChild(dd); });
+      b.appendChild(dl);
+    }
+    if (n.table) b.appendChild(table(n.table));
+    if (n.kids) n.kids.forEach(function (k) { b.appendChild(render(k)); });
+    d.appendChild(b);
+  }
+  function table(t) {
+    var wrap = h("div", "table-wrap ptable");
+    var tb = h("table", "data"), thead = h("thead"), tr = h("tr");
+    t.cols.forEach(function (c) { tr.appendChild(h("th", null, c)); });
+    thead.appendChild(tr); tb.appendChild(thead);
+    var body = h("tbody");
+    var exprCol = t.cols.findIndex(function (c) { return /^Expression/.test(c); });
+    t.rows.forEach(function (r) {
+      var row = h("tr");
+      r.forEach(function (cell, i) {
+        var td = h("td", i === exprCol ? "expr" : null);
+        if (/^L\d+(–\d+)?$/.test(cell) || /\(L\d+(–\d+)?\)/.test(cell)) td.appendChild(fmt(cell)); else td.textContent = cell;
+        row.appendChild(td);
+      });
+      body.appendChild(row);
+    });
+    tb.appendChild(body); wrap.appendChild(tb);
+    return wrap;
+  }
+
+  var root = document.getElementById("tree-root");
+  root.appendChild(render(D.tree));
+
+  function openNode(id) { var d = els[id]; if (!d) return; fill(d, byId[id]); d.open = true; }
+  function openPath(id) {
+    var chain = [];
+    for (var cur = id; cur; cur = parent[cur]) chain.unshift(cur);
+    chain.forEach(openNode);
+    var d = els[id];
+    if (!d) return;
+    d.scrollIntoView({ behavior: "smooth", block: "start" });
+    d.classList.add("flash");
+    setTimeout(function () { d.classList.remove("flash"); }, 1800);
+  }
+  function openDepth(n, depth, max) { if (depth >= max) return; openNode(n.id); (n.kids || []).forEach(function (k) { openDepth(k, depth + 1, max); }); }
+  function openMain() { openDepth(D.tree, 0, 4); }
+  function closeAll() { Object.keys(els).forEach(function (id) { els[id].open = false; }); }
+  document.getElementById("open-main").addEventListener("click", function () { closeAll(); openMain(); });
+  document.getElementById("open-all").addEventListener("click", function () {
+    (function all(n) { openNode(n.id); (n.kids || []).forEach(all); })(D.tree);
+  });
+  document.getElementById("close-all").addEventListener("click", closeAll);
+  openMain();
+
+  /* ---------- file map ---------- */
+  var total = D.file.lines;
+  document.getElementById("lastline").textContent = "L" + total.toLocaleString("en");
+  var fm = document.getElementById("filemap"), sl = document.getElementById("seglist");
+  function kindClass(k) { return k === "mapping" ? "k-map" : (k === "source" || k === "target") ? "k-def" : "k-run"; }
+  D.segments.forEach(function (sg) {
+    var n = sg.e - sg.s + 1;
+    var b = h("button", kindClass(sg.kind), n > 300 ? sg.label.replace(/^Mapping /, "") : "");
+    b.type = "button";
+    b.style.flex = n + " 1 0";
+    b.title = sg.label + " · L" + sg.s + "–" + sg.e + " (" + n.toLocaleString("en") + " lines)";
+    b.setAttribute("aria-label", b.title);
+    b.addEventListener("click", function () { openPath(sg.node); });
+    fm.appendChild(b);
+    var li = h("li"), sw = h("span", "sw " + kindClass(sg.kind)), bt = h("button", null, sg.label);
+    bt.type = "button"; bt.addEventListener("click", function () { openPath(sg.node); });
+    li.appendChild(sw); li.appendChild(bt);
+    li.appendChild(document.createTextNode(" "));
+    var meta = h("span", "muted small"); meta.appendChild(fmt("L" + sg.s + "–" + sg.e)); meta.appendChild(document.createTextNode(" · " + n.toLocaleString("en") + " lines"));
+    li.appendChild(meta);
+    sl.appendChild(li);
+  });
+
+  /* ---------- problems ---------- */
+  var SEV = [["wrong", "give wrong data"], ["confusing", "easy to misread"], ["noise", "harmless noise"], ["security", "security"]];
+  var SEVTAG = { wrong: "Gives wrong data", confusing: "Easy to misread", noise: "Harmless noise", security: "Security" };
+  var filter = null;
+  var stats = document.getElementById("sev-stats");
+  SEV.forEach(function (sv) {
+    var n = D.problems.filter(function (x) { return x.sev === sv[0]; }).length;
+    var b = h("button"); b.type = "button"; b.dataset.sev = sv[0]; b.setAttribute("aria-pressed", "false");
+    b.appendChild(h("b", null, String(n))); b.appendChild(h("span", null, sv[1]));
+    b.addEventListener("click", function () {
+      filter = filter === sv[0] ? null : sv[0];
+      stats.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x.dataset.sev === filter)); });
+      renderProblems();
+    });
+    stats.appendChild(b);
+  });
+  var SHORT = { m_FL_JS_STAGING_FULL: "staging", m_FL_JS_MARTS_CORE: "core", m_FL_JS_MARTS_ENRICHED: "enriched" };
+  function nodeLabel(id) {
+    var n = byId[id]; if (!n) return id;
+    var base = n.name.replace(/ \(\d+\)$/, "");
+    var parts = id.split("-");
+    var m = /^(tx|txg|conn|mv)$/.test(parts[0]) ? SHORT[parts[1]] : null;
+    return m ? base + " (" + m + ")" : base;
+  }
+  function renderProblems() {
+    var list = document.getElementById("problem-list"); list.innerHTML = "";
+    D.problems.forEach(function (pr) {
+      if (filter && pr.sev !== filter) return;
+      var c = h("article", "problem " + pr.sev); c.id = "p-" + pr.id;
+      c.appendChild(h("span", "sevtag", SEVTAG[pr.sev]));
+      if (pr.by === "you") c.appendChild(h("span", "foundby", "Found by you"));
+      if (pr.by === "review") c.appendChild(h("span", "foundby review", "Found by the independent review"));
+      c.appendChild(h("h3", null, pr.title));
+      if (pr.byNote) c.appendChild(p(pr.byNote, "bynote"));
+      c.appendChild(p(pr.body[0]));
+      var rest = pr.body.slice(1);
+      if (rest.length > 1 && pr.id === "swap") {
+        var ul = h("ul"); rest.forEach(function (t) { var li = h("li"); li.appendChild(fmt(t)); ul.appendChild(li); }); c.appendChild(ul);
+      } else rest.forEach(function (t) { c.appendChild(p(t)); });
+      if (pr.list) {
+        var det = h("details", "cols"); det.appendChild(h("summary", null, "Show the affected columns"));
+        var ul2 = h("ul"); pr.list.forEach(function (t) { ul2.appendChild(h("li", null, t)); }); det.appendChild(ul2); c.appendChild(det);
+      }
+      if (pr.open) c.appendChild(p(pr.open, "open-q"));
+      if (pr.earlier) c.appendChild(p("Correction: " + pr.earlier, "earlier"));
+      if (pr.nodes.length) {
+        var g = h("div", "goto");
+        pr.nodes.forEach(function (id) {
+          var b = h("button", null, "Show " + nodeLabel(id) + " in the tree"); b.type = "button";
+          b.addEventListener("click", function () { openPath(id); });
+          g.appendChild(b);
+        });
+        c.appendChild(g);
+      }
+      list.appendChild(c);
+    });
+  }
+  function showProblem(id) {
+    if (filter) { filter = null; stats.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", "false"); }); renderProblems(); }
+    var el = document.getElementById("p-" + id);
+    if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); el.animate([{ boxShadow: "0 0 0 3px var(--warn)" }, { boxShadow: "none" }], { duration: 1600 }); }
+  }
+  renderProblems();
+  var cl = document.getElementById("clean-list");
+  D.clean.forEach(function (t) { var li = h("li"); li.appendChild(fmt(t)); cl.appendChild(li); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Five Steps</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/glossary-data.js"></script>
+<script src="assets/example-data.js"></script>
+<script src="assets/site.js"></script>
+</head>
+<body>
+<header class="site-header"><div class="inner">
+  <a class="brand" href="index.html">PowerCenter → dbt <span>explainer</span></a>
+  <nav class="site-nav" id="site-nav" aria-label="Sections"></nav>
+</div></header>
+
+<main>
+  <h1>The five steps, on one example</h1>
+  <p class="lead">How the converter gets from the XML to the SQL. Each step takes the previous step's output. The example is the same orders path as on <a href="example.html">One mapping, end to end</a>.</p>
+
+  <div class="steps" role="tablist" id="steps"></div>
+  <div class="panel" id="step-panel" aria-live="polite"></div>
+  <div class="pager">
+    <button type="button" id="prev">← Previous</button>
+    <button type="button" id="next">Next →</button>
+  </div>
+
+  <footer class="page-foot">Step content uses <code>assets/example-data.js</code>, generated from the XML, so every line number is real.</footer>
+</main>
+
+<script>
+(function () {
+  var E = window.EXAMPLE;
+  var byId = {};
+  E.nodes.forEach(function (n) { byId[n.id] = n; });
+
+  function h(tag, text, cls) { var e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; }
+  function para(text, cls) { var p = h("p", null, cls); p.appendChild(Site.textWithLines(text)); return p; }
+  function code(lines) { var pre = h("pre"); Site.renderCode(pre, lines); return pre; }
+  function plain(text) { var pre = h("pre", text, "code plain"); return pre; }
+  /* Pick some real XML rows of a node (definition + incoming connectors), with "…" where lines are skipped. */
+  function pick(node, nums) {
+    var rows = byId[node].lines.concat(byId[node].wiresIn).filter(function (r) { return nums.indexOf(r[0]) >= 0; });
+    var out = [];
+    rows.forEach(function (r, i) {
+      if (i > 0 && r[0] !== rows[i - 1][0] + 1) out.push([null, "…"]);
+      out.push(r);
+    });
+    return out;
+  }
+  function io(inEl, outEl) {
+    var g = h("div", null, "io");
+    var a = h("div"); a.appendChild(h("h4", "In")); a.appendChild(inEl);
+    var b = h("div"); b.appendChild(h("h4", "Out")); b.appendChild(outEl);
+    g.appendChild(a); g.appendChild(b);
+    return g;
+  }
+  function watch(items) {
+    var c = h("div", null, "callout open");
+    c.appendChild(h("p", "Watch out", "")).style.fontWeight = "600";
+    items.forEach(function (t) { c.appendChild(para(t)); });
+    return c;
+  }
+  function table(head, rows) {
+    var wrap = h("div", null, "table-wrap"), t = h("table", null, "data");
+    var tr = h("tr"); head.forEach(function (x) { tr.appendChild(h("th", x)); });
+    var th = h("thead"); th.appendChild(tr); t.appendChild(th);
+    var tb = h("tbody");
+    rows.forEach(function (r) {
+      var row = h("tr");
+      r.forEach(function (cell, i) {
+        var td = h("td");
+        if (i === 1 || i === 2) td.className = "mono";
+        td.appendChild(Site.textWithLines(cell));
+        row.appendChild(td);
+      });
+      tb.appendChild(row);
+    });
+    t.appendChild(tb); wrap.appendChild(t);
+    return wrap;
+  }
+  function pathFlow(labels, hotLast) {
+    var f = h("div", null, "flow tight");
+    E.nodes.forEach(function (n, i) {
+      if (i > 0) f.appendChild(h("div", labels ? labels[i - 1] : "", "flow-arrow"));
+      var node = h("div", null, "flow-node" + (i === 0 ? " input" : i === E.nodes.length - 1 ? " output" : ""));
+      node.appendChild(h("span", n.id, "t"));
+      node.appendChild(h("span", n.type, "s"));
+      f.appendChild(node);
+    });
+    Site.breakAtUnderscores(f);
+    return f;
+  }
+
+  var STEPS = [
+    { title: "Parse", term: "parse",
+      what: "Read the XML into plain objects. Keep what describes logic and skip the runtime settings.",
+      build: function (box) {
+        box.appendChild(io(
+          code(pick("EXP_ORDERS", [106, 111, 121, 647])),
+          plain("Transformation EXP_ORDERS   type: Expression\n" +
+                "  port SUBTOTAL      OUTPUT   expression: SUBTOTAL_IN/100\n" +
+                "  port SUBTOTAL_IN   INPUT\n\n" +
+                "Connector  SQ_RAW_ORDERS.SUBTOTAL\n" +
+                "        →  EXP_ORDERS.SUBTOTAL_IN")
+        ));
+        box.appendChild(table(["", "Keep", "Skip for now"], [
+          ["What", "PC Sources, PC Targets, transformations, ports, port expressions, instances, connectors", "tracing level, cache sizes, reject files, partitions, workflow variables"],
+          ["Settings that change results", "SQL override, filter, join condition and type, distinct, sort keys, group-by ports", "connection names (they only say where, not what)"]
+        ]));
+        box.appendChild(watch([
+          "Connectors name instances, not tables. RAW_PRODUCTS1 (L577) is a second instance of RAW_PRODUCTS, so the parser has to map it back.",
+          "The file is Windows-1252 encoded (L1). Read it with that encoding."
+        ]));
+      } },
+    { title: "Graph", term: "mapping-graph",
+      what: "Instances become nodes and connectors become edges. All the column connectors between two boxes add up to one box-level edge.",
+      build: function (box) {
+        var total = E.wireCounts.reduce(function (s, w) { return s + w.count; }, 0);
+        box.appendChild(pathFlow(E.wireCounts.map(function (w) { return w.count + " connectors"; })));
+        box.appendChild(para("This path: " + E.nodes.length + " nodes, " + E.wireCounts.length + " box-level edges, " + total + " connectors."));
+        box.appendChild(watch([
+          "The whole staging mapping has 24 transformations and 165 connectors. This path uses " + total + " of the connectors.",
+          "One box can feed several others: a Router has several outputs, and one table can be read twice. So it's a graph, not a list."
+        ]));
+      } },
+    { title: "Walk", term: "walk",
+      what: "Start at the PC Target and follow connectors backwards to the PC Sources. Reverse the list to get the build order: one CTE per box.",
+      build: function (box) {
+        box.appendChild(io(
+          plain("STG_ORDERS\n  ← SRT_ORDERS\n  ← EXP_ORDERS\n  ← SQ_RAW_ORDERS\n  ← RAW_ORDERS"),
+          plain("build order:\n1. RAW_ORDERS      (dbt source)\n2. SQ_RAW_ORDERS   (CTE)\n3. EXP_ORDERS      (CTE)\n4. SRT_ORDERS      (dropped)\n5. STG_ORDERS      (final select)")
+        ));
+        box.appendChild(h("h3", "Column lineage: pick a target column"));
+        var sel = h("select", null, "search");
+        sel.setAttribute("aria-label", "Target column");
+        E.targetColumns.forEach(function (c) {
+          var o = h("option", "STG_ORDERS." + c + (E.lineage[c][0].flag ? "  (flagged)" : ""));
+          o.value = c; sel.appendChild(o);
+        });
+        sel.value = "SUBTOTAL_CENTS";
+        var ol = h("ol", null, "chain");
+        function show() {
+          ol.innerHTML = "";
+          E.lineage[sel.value].forEach(function (s) {
+            var li = h("li", null, s.flag ? "flag" : "");
+            li.appendChild(document.createTextNode(s.text + "  "));
+            var why = h("span", null, "why");
+            why.appendChild(Site.textWithLines(s.kind + " · L" + s.n));
+            li.appendChild(why);
+            ol.appendChild(li);
+          });
+        }
+        sel.addEventListener("change", show);
+        box.appendChild(sel); box.appendChild(ol); show();
+        box.appendChild(watch([
+          "Port names change along the way: SUBTOTAL becomes SUBTOTAL_IN at L647. The walk follows connectors, so it never has to guess by name.",
+          "Red rows are flags: the first connector feeds a column whose name says something else."
+        ]));
+      } },
+    { title: "Translate", term: "translate",
+      what: "Turn each box into SQL with one rule per box type, and turn each port expression into a SQL expression.",
+      build: function (box) {
+        box.appendChild(h("h3", "One rule per box"));
+        box.appendChild(table(["Box", "Type", "Becomes"], [
+          ["RAW_ORDERS", "PC Source", "a table in sources.yml, read with source('raw', 'raw_orders')"],
+          ["SQ_RAW_ORDERS", "Source Qualifier", "CTE sq_raw_orders: select the 7 columns. No override or filter (L169, L171)"],
+          ["EXP_ORDERS", "Expression", "CTE exp_orders: one '<expression> as <port>' per output port"],
+          ["SRT_ORDERS", "Sorter", "dropped with a comment: Distinct is NO (L527) and nothing after it depends on order"],
+          ["STG_ORDERS", "PC Target", "final select: one column per incoming connector, named after the target column"]
+        ]));
+        box.appendChild(h("h3", "Port expressions on this path"));
+        box.appendChild(table(["XML", "Informatica", "SQL", ""], [
+          ["L107", "ID", "id as order_id", "pass-through (a rename)"],
+          ["L111", "SUBTOTAL_IN/100", "subtotal / 100", "SUBTOTAL_IN is the port fed by SQ_RAW_ORDERS.SUBTOTAL (L647)"],
+          ["L110", "TO_DATE(TO_CHAR(ORDERED_AT, 'DD-MM-YY'), 'DD-MM-YY')", "date_trunc('day', ordered_at)", "keeps the day. The round trip uses a 2-digit year, so the century has to be guessed back: only equal while that guess is right"]
+        ]));
+        box.appendChild(h("h3", "Flags raised (" + E.flags.length + ")"));
+        var ul = h("ul");
+        E.flags.forEach(function (f) {
+          var li = h("li");
+          li.appendChild(Site.textWithLines("STG_ORDERS." + f.column + " is fed by " + f.from + " (L" + f.n + ")"));
+          ul.appendChild(li);
+        });
+        box.appendChild(ul);
+        box.appendChild(watch([
+          "This path needs only 3 kinds of expression. The whole file has 119 logic expressions (IIF, ISNULL, SUM, MAX, ...). That's where most of the translation work is."
+        ]));
+      } },
+    { title: "Write", term: "write",
+      what: "Write one model file per PC Target, a sources.yml for the PC Sources it reads, and the flags.",
+      build: function (box) {
+        box.appendChild(plain(
+          "models/\n" +
+          "  staging/\n" +
+          "    sources.yml          raw_orders (and the other raw tables)\n" +
+          "    stg_orders.sql       this example\n" +
+          "    stg_*.sql            5 more from the same mapping\n" +
+          "conversion report       the 6 flags for stg_orders (format still open)"));
+        var p = h("p");
+        var a = h("a", "See the full stg_orders.sql and sources.yml →");
+        a.href = "example.html#output";
+        p.appendChild(a);
+        box.appendChild(p);
+        box.appendChild(watch([
+          "When a mart mapping later reads STG_ORDERS as a PC Source, it must become ref('stg_orders'), not a second source. Otherwise dbt can't work out the build order.",
+          "Folder names, the report format and data tests (schema.yml) are still open."
+        ]));
+      } }
+  ];
+
+  var stepsEl = document.getElementById("steps"), panel = document.getElementById("step-panel");
+  var prev = document.getElementById("prev"), next = document.getElementById("next");
+  var current = 0, btns = [];
+  STEPS.forEach(function (s, i) {
+    var b = h("button", null, "");
+    b.type = "button";
+    b.setAttribute("role", "tab");
+    b.appendChild(h("span", "Step " + (i + 1), "n"));
+    b.appendChild(h("span", s.title, "t"));
+    b.addEventListener("click", function () { go(i); });
+    stepsEl.appendChild(b); btns.push(b);
+  });
+  function go(i) {
+    current = i;
+    btns.forEach(function (b, j) { b.setAttribute("aria-selected", j === i ? "true" : "false"); });
+    var s = STEPS[i];
+    panel.innerHTML = "";
+    var t = h("h3");
+    t.appendChild(document.createTextNode("Step " + (i + 1) + " · "));
+    var a = h("a", s.title, "term"); a.dataset.term = s.term; t.appendChild(a);
+    panel.appendChild(t);
+    panel.appendChild(para(s.what));
+    s.build(panel);
+    Site.linkTerms(panel);
+    prev.disabled = i === 0;
+    next.disabled = i === STEPS.length - 1;
+    if (history.replaceState) history.replaceState(null, "", "#step-" + (i + 1));
+  }
+  prev.addEventListener("click", function () { if (current > 0) go(current - 1); });
+  next.addEventListener("click", function () { if (current < STEPS.length - 1) go(current + 1); });
+  var m = location.hash.match(/step-(\d)/);
+  go(m ? Math.min(STEPS.length, Math.max(1, +m[1])) - 1 : 0);
+})();
+</script>
+</body>
+</html>
