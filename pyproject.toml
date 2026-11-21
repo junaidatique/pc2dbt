@@ -1,0 +1,26 @@
+[project]
+name = "pc2dbt"
+version = "0.1.0"
+description = "Convert an Informatica PowerCenter mapping XML export into a dbt project"
+requires-python = ">=3.10"
+dependencies = []  # the converter itself uses the standard library only
+
+[project.optional-dependencies]
+# Only the tests need these: DuckDB to run SQL, dbt to build the generated
+# project, and the jaffle-shop comparison (tests/reference).
+test = ["pytest>=8", "duckdb==2.0.1", "dbt-core==1.12.7", "dbt-duckdb==1.11.1", "pyyaml>=6"]
+
+[project.scripts]
+pc2dbt = "pc2dbt.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["pc2dbt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not reference'"
+markers = ["reference: builds the project with dbt and compares it with jaffle-shop (slow, needs external/)"]

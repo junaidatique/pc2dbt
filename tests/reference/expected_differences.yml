@@ -1,0 +1,54 @@
+# Check 3: every known difference between our output and jaffle-shop, with its reason.
+# A difference not listed here fails the test ("unexplained"); a listed one that no longer
+# differs also fails ("stale"), so this list stays true.
+#
+# key: columns that identify a row (our names)
+# rename: our column -> jaffle-shop column, where the names differ
+# boolean_as_int: jaffle-shop uses true/false where the XML uses 1/0
+# explained: our column -> why it differs (with XML lines and decisions)
+# not_compared: columns with no twin on the other side
+
+staging:
+  stg_customers:
+    key: [customer_id]
+
+  stg_locations:
+    key: [location_id]
+    not_compared:
+      ours:
+        region: "Derived from the tax rate in the XML (L236); jaffle-shop has no region."
+
+  stg_order_items:
+    key: [order_item_id]
+
+  stg_orders:
+    key: [order_id]
+    rename: {ordered_at_day: ordered_at}
+    explained:
+      subtotal_cents: "Swap at L608: holds dollars, rounded to whole dollars by its NUMBER(15,0) column (decisions D1, Q11)."
+      tax_paid_cents: "Swap at L609: holds dollars, rounded to whole dollars by its NUMBER(15,0) column (decisions D1, Q11)."
+      order_total_cents: "Swap at L610: holds dollars (decision D1)."
+      subtotal: "Swap at L611: holds cents (decision D1)."
+      tax_paid: "Swap at L612: holds cents (decision D1)."
+      order_total: "Swap at L613: holds cents (decision D1)."
+
+  stg_products:
+    key: [product_id]
+    boolean_as_int: [is_food_item, is_drink_item]
+    explained:
+      product_price: "Swap at L621: holds cents, not dollars (decision D1)."
+    not_compared:
+      ours:
+        product_price_cents: "Swap at L620: holds dollars rounded to whole dollars; jaffle-shop has no cents column."
+
+  stg_supplies:
+    key: [supply_id, product_id]   # supply_id alone repeats (29 distinct IDs in 65 rows)
+    rename: {is_perishable: is_perishable_supply}
+    boolean_as_int: [is_perishable]
+    explained:
+      is_perishable: "The rule at L504 compares text to 'Y' and '1'; loaded with the XML's text type (decision Q14) the seed's True/False never match, so every supply is 0."
+    not_compared:
+      ours:
+        supply_cost_cents: "jaffle-shop has no cents column."
+      reference:
+        supply_uuid: "jaffle-shop's surrogate key; the XML has none."

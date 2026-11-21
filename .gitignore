@@ -20,3 +20,7 @@ logs/
 .idea/
 .vscode/
 .claude/settings.local.json
+
+# test caches (jaffle-shop reference build)
+tests/.cache/
+*.egg-info/

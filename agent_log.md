@@ -226,6 +226,35 @@ Nothing found.
 | Said it was unknown whether the whole-number port (L3382) rounds. With high precision off, the documentation says decimals are processed as doubles, so it doesn't round inside the mapping. | You | You pointed to the high-precision settings (L1007, L4292, L4570); I checked Informatica's guides. | The input page now says it isn't rounded in the mapping, with the one conflicting table noted. |
 | The Master Outer problem covered rows the joins drop, but not rows they add when an unmatched lookup row comes through. | You | You asked whether stores with no items add rows. | Traced all 6 lookup-side joins and added where the extra rows go, today and with other data. |
 
+### Prompt 9: Commit, plan changes, and build step 1 (staging end to end)
+
+21 Nov 2026, 16:08 · typed
+
+**My prompt**
+
+> Okay, both points check out, and thanks for reading the docs and noting that the page that disagree instead of hiding it. The extra row answer is clear. Nothing changes today, but the other data would show it. Good, that's in the things to watch. The decisions are recorded correctly, and yes, question 9 was my slip for question 19. The commit approved go ahead with these message, and for the build plan the modules and the order looks right. The starting and the with staging and to end is what I wanted. But before moving forward, I would like to make three changes. Add rough times for each step and a total. I'll report the real time in README. And move the Jeffrey shop comparison out of the converter package and into the test. The converter shouldn't need dbt or Jeffrey shop to run. And the key third point is keep the results page small and plain. For each staging table, the XML box next to the SQL it became, plus the comparison results as match explained or unexplained. That connects the explainer to the actual output. And one more suggestion, yes, commit the generated dbt project so reviewers can read it without running anything. Then start with step 1, staging end to end, and test it first. When it's done, stop and show me the generated model, the comparison results, the test result, and the commit message. And don't commit anything, show me the commit message before you commit.
+
+**Answer, in short**
+
+- Committed the understanding phase as `630db46`: the 17 files and the message you approved.
+- Plan changes: added rough times (step 1 about 1 h, step 2 about 1 h 15 min, step 3 about 1 h, step 4 about 1 h; about 4 h 15 min in total), moved the jaffle-shop comparison into the tests, and agreed to commit the generated project.
+- Built step 1 test-first. I wrote the tests before the converter (parse, expressions, every staging box type on a hand-made XML fixture, the real staging mapping on hand-made rows, and the project writer) and watched them fail first.
+- The converter is a Python package, `pc2dbt`, using only the standard library (parse, expr, convert, types, project, cli). dbt and DuckDB are test-only dependencies.
+- `pc2dbt convert` wrote the staging project to `out/`: 6 models, `sources.yml`, and `flags.md` with 20 flags and 9 left-out items. A snapshot test keeps `out/` in step with the converter.
+- `dbt build` passes on DuckDB, and the row counts match the seed data.
+- Check 3, in `tests/reference`, compares with jaffle-shop at `7d0d8de`: 23 columns match, 8 differ for listed reasons, 0 are unexplained, and 4 have no twin.
+- Added a small Results page, and moved the docs generator scripts into `tools/docs/`. Nothing in step 1 is committed yet.
+
+**What the agent got wrong**
+
+| What went wrong | Caught by | How it was caught | What changed |
+|---|---|---|---|
+| Told you the Union maps input ports to outputs by position. It lists explicit FIELDDEPENDENCY pairs (inside L368–426). | Agent | Read the Union's XML before writing its translator. | The translator uses FIELDDEPENDENCY, and the fixture mirrors it. |
+| The fixture test data used lower-case team IDs, though the fixture joins on UPPER(TEAM). | Agent | Three fixture tests failed with no rows. | Fixed the test data; the converter was right. |
+| The comparison harness looked for columns in a per-database information_schema, which DuckDB doesn't have. | Agent | The reference test failed. | It now reads the shared information_schema, filtered by database. |
+| flags.md listed six session helper tasks as workflow command tasks. | Agent | Read the generated flags.md. | Added a test; only the workflow's own tasks are listed now. |
+| The Results page scrolled sideways on narrow screens. | Agent | Browser check at phone width. | The code columns can now shrink. |
+
 ## Part 2: Things to watch
 
 Status: **open** means not decided or not done, **decided** means we agreed what to do, **handled** means it is done and checked.
@@ -268,7 +297,7 @@ Status: **open** means not decided or not done, **decided** means we agreed what
 | Supply cost passes through a whole-number port (L3382). | Not rounded inside the mapping, because high precision is off (Advanced Workflow Guide). One Designer Guide table disagrees; noted on the input page. | decided |
 | The counter's Sorters ignore case and place NULLs differently (L1654, L3567, L3571, L1658). | The copy follows these settings and flags them (Q12, Q13). | decided |
 | Another XML may contain boxes or functions the converter doesn't know. | Everything else is converted; the unknown model fails at dbt compile with the element name and its line, is listed in the report, and the converter exits with an error (Q18). | decided |
-| The scripts that generate the docs data live in a temporary folder. | They move into the repo in build step 1. | open |
+| The scripts that generate the docs data lived in a temporary folder. | Moved into `tools/docs/` in build step 1. | handled |
 
 ### Submission
 

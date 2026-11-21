@@ -20,6 +20,7 @@
     { href: "example.html", title: "One mapping, end to end" },
     { href: "steps.html", title: "The 5 steps" },
     { href: "decisions.html", title: "Decisions" },
+    { href: "results.html", title: "Results" },
     { href: "process-log.html", title: "Process log" }
   ];
 

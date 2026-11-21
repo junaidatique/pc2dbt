@@ -1,0 +1,346 @@
+{
+  "reference": "dbt-labs/jaffle-shop @ 7d0d8de",
+  "summary": {
+    "matched": 23,
+    "not compared": 4,
+    "explained": 8
+  },
+  "tables": [
+    {
+      "table": "stg_customers",
+      "key": [
+        "customer_id"
+      ],
+      "rows": {
+        "ours": 935,
+        "reference": 935,
+        "only_ours": 0,
+        "only_reference": 0,
+        "status": "matched"
+      },
+      "columns": [
+        {
+          "ours": "customer_id",
+          "reference": "customer_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "customer_name",
+          "reference": "customer_name",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        }
+      ]
+    },
+    {
+      "table": "stg_locations",
+      "key": [
+        "location_id"
+      ],
+      "rows": {
+        "ours": 6,
+        "reference": 6,
+        "only_ours": 0,
+        "only_reference": 0,
+        "status": "matched"
+      },
+      "columns": [
+        {
+          "ours": "location_id",
+          "reference": "location_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "location_name",
+          "reference": "location_name",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "opened_date",
+          "reference": "opened_date",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "tax_rate",
+          "reference": "tax_rate",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "region",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "Derived from the tax rate in the XML (L236); jaffle-shop has no region."
+        }
+      ]
+    },
+    {
+      "table": "stg_order_items",
+      "key": [
+        "order_item_id"
+      ],
+      "rows": {
+        "ours": 90900,
+        "reference": 90900,
+        "only_ours": 0,
+        "only_reference": 0,
+        "status": "matched"
+      },
+      "columns": [
+        {
+          "ours": "order_item_id",
+          "reference": "order_item_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "order_id",
+          "reference": "order_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "product_id",
+          "reference": "product_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        }
+      ]
+    },
+    {
+      "table": "stg_orders",
+      "key": [
+        "order_id"
+      ],
+      "rows": {
+        "ours": 61948,
+        "reference": 61948,
+        "only_ours": 0,
+        "only_reference": 0,
+        "status": "matched"
+      },
+      "columns": [
+        {
+          "ours": "order_id",
+          "reference": "order_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "customer_id",
+          "reference": "customer_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "location_id",
+          "reference": "location_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "ordered_at_day",
+          "reference": "ordered_at",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "subtotal_cents",
+          "reference": "subtotal_cents",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "Swap at L608: holds dollars, rounded to whole dollars by its NUMBER(15,0) column (decisions D1, Q11)."
+        },
+        {
+          "ours": "tax_paid_cents",
+          "reference": "tax_paid_cents",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "Swap at L609: holds dollars, rounded to whole dollars by its NUMBER(15,0) column (decisions D1, Q11)."
+        },
+        {
+          "ours": "order_total_cents",
+          "reference": "order_total_cents",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "Swap at L610: holds dollars (decision D1)."
+        },
+        {
+          "ours": "subtotal",
+          "reference": "subtotal",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "Swap at L611: holds cents (decision D1)."
+        },
+        {
+          "ours": "tax_paid",
+          "reference": "tax_paid",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "Swap at L612: holds cents (decision D1)."
+        },
+        {
+          "ours": "order_total",
+          "reference": "order_total",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "Swap at L613: holds cents (decision D1)."
+        }
+      ]
+    },
+    {
+      "table": "stg_products",
+      "key": [
+        "product_id"
+      ],
+      "rows": {
+        "ours": 10,
+        "reference": 10,
+        "only_ours": 0,
+        "only_reference": 0,
+        "status": "matched"
+      },
+      "columns": [
+        {
+          "ours": "product_id",
+          "reference": "product_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "product_name",
+          "reference": "product_name",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "product_type",
+          "reference": "product_type",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "product_price_cents",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "Swap at L620: holds dollars rounded to whole dollars; jaffle-shop has no cents column."
+        },
+        {
+          "ours": "product_price",
+          "reference": "product_price",
+          "status": "explained",
+          "differing_rows": 10,
+          "reason": "Swap at L621: holds cents, not dollars (decision D1)."
+        },
+        {
+          "ours": "product_description",
+          "reference": "product_description",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "is_food_item",
+          "reference": "is_food_item",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "is_drink_item",
+          "reference": "is_drink_item",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        }
+      ]
+    },
+    {
+      "table": "stg_supplies",
+      "key": [
+        "supply_id",
+        "product_id"
+      ],
+      "rows": {
+        "ours": 65,
+        "reference": 65,
+        "only_ours": 0,
+        "only_reference": 0,
+        "status": "matched"
+      },
+      "columns": [
+        {
+          "ours": "supply_id",
+          "reference": "supply_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "supply_name",
+          "reference": "supply_name",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "supply_cost_cents",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "jaffle-shop has no cents column."
+        },
+        {
+          "ours": "supply_cost",
+          "reference": "supply_cost",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "is_perishable",
+          "reference": "is_perishable_supply",
+          "status": "explained",
+          "differing_rows": 30,
+          "reason": "The rule at L504 compares text to 'Y' and '1'; loaded with the XML's text type (decision Q14) the seed's True/False never match, so every supply is 0."
+        },
+        {
+          "ours": "product_id",
+          "reference": "product_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": null,
+          "reference": "supply_uuid",
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "jaffle-shop's surrogate key; the XML has none."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: raw_customers
+        description: 'PC Source RAW_CUSTOMERS (L40–43), owner RAW'
+        columns:
+          - name: id
+            data_type: varchar
+          - name: name
+            data_type: varchar
+      - name: raw_items
+        description: 'PC Source RAW_ITEMS (L35–39), owner RAW'
+        columns:
+          - name: id
+            data_type: varchar
+          - name: order_id
+            data_type: varchar
+          - name: sku
+            data_type: varchar
+      - name: raw_orders
+        description: 'PC Source RAW_ORDERS (L26–34), owner RAW'
+        columns:
+          - name: id
+            data_type: varchar
+          - name: customer
+            data_type: varchar
+          - name: ordered_at
+            data_type: timestamp
+          - name: store_id
+            data_type: varchar
+          - name: subtotal
+            data_type: decimal(15,0)
+          - name: tax_paid
+            data_type: decimal(15,0)
+          - name: order_total
+            data_type: decimal(12,2)
+      - name: raw_products
+        description: 'PC Source RAW_PRODUCTS (L19–25), owner RAW'
+        columns:
+          - name: sku
+            data_type: varchar
+          - name: name
+            data_type: varchar
+          - name: type
+            data_type: varchar
+          - name: price
+            data_type: decimal(15,0)
+          - name: description
+            data_type: varchar
+      - name: raw_stores
+        description: 'PC Source RAW_STORES (L13–18), owner RAW'
+        columns:
+          - name: id
+            data_type: varchar
+          - name: name
+            data_type: varchar
+          - name: opened_at
+            data_type: timestamp
+          - name: tax_rate
+            data_type: decimal(6,4)
+      - name: raw_supplies
+        description: 'PC Source RAW_SUPPLIES (L6–12), owner RAW'
+        columns:
+          - name: id
+            data_type: varchar
+          - name: name
+            data_type: varchar
+          - name: cost
+            data_type: decimal(15,0)
+          - name: perishable
+            data_type: varchar
+          - name: sku
+            data_type: varchar

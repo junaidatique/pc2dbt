@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Converter Results</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/glossary-data.js"></script>
+<script src="assets/results-data.js"></script>
+<script src="assets/site.js"></script>
+<style>
+  details.tbl { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); margin: 10px 0; }
+  details.tbl > summary { cursor: pointer; padding: 10px 14px; font-weight: 650; }
+  details.tbl > summary .muted { font-weight: 400; }
+  details.tbl > .inner { padding: 0 14px 14px; }
+  .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin: 10px 0 18px; }
+  .pair h4 { margin: 0 0 4px; font-size: 13px; color: var(--muted); font-weight: 600; }
+  .pair pre { margin: 0; max-height: 380px; overflow: auto; font-size: 12px; }
+  .pair .dropped { color: var(--muted); font-size: 14px; padding: 8px 0; }
+  .box-title { font-family: var(--mono); font-size: 13px; margin: 14px 0 0; }
+  td.status { white-space: nowrap; font-weight: 600; }
+  td.status.unexplained { color: var(--warn); }
+  td.status.not { color: var(--muted); font-weight: 400; }
+  @media (max-width: 900px) { .pair { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="inner">
+  <a class="brand" href="index.html">PowerCenter → dbt <span>explainer</span></a>
+  <nav class="site-nav" id="site-nav" aria-label="Sections"></nav>
+</div></header>
+
+<main>
+  <h1>Results: staging</h1>
+  <p class="lead" id="lead"></p>
+
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Table</th><th>Rows (ours / jaffle-shop)</th><th>Match</th><th>Explained</th><th>Unexplained</th><th>Not compared</th></tr></thead>
+      <tbody id="summary"></tbody>
+    </table>
+  </div>
+  <p class="small muted">Match: every row has the same value. Explained: the values differ for a reason listed in <code>tests/reference/expected_differences.yml</code>. Unexplained: a difference with no reason, which fails the test.</p>
+
+  <div id="tables"></div>
+
+  <footer class="page-foot">Built from <code>out/</code> (written by <code>pc2dbt convert</code>) and <code>tests/reference/results/staging.json</code> (written by <code>pytest -m reference</code>), by <code>tools/docs/build_results_data.py</code>.</footer>
+</main>
+
+<script>
+(function () {
+  var R = window.RESULTS;
+  function h(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function fmt(n) { return n == null ? "" : Number(n).toLocaleString("en"); }
+  var LABEL = { matched: "match", explained: "explained", unexplained: "unexplained", stale: "unexplained (stale)", "not compared": "not compared" };
+
+  var lead = document.getElementById("lead");
+  lead.appendChild(document.createTextNode("Mapping " + R.mapping + " "));
+  var a = h("a", "L", "L" + R.mapping_lines[0] + "–" + R.mapping_lines[1]); lead.appendChild(a);
+  lead.appendChild(document.createTextNode(" converted by pc2dbt, built with dbt on DuckDB, and compared with " + R.reference + " on the same seed data."));
+  Site.linkLines(lead);
+
+  function counts(t) {
+    var c = { matched: 0, explained: 0, unexplained: 0, "not compared": 0 };
+    (t.comparison ? t.comparison.columns : []).forEach(function (x) { c[x.status === "stale" ? "unexplained" : x.status]++; });
+    return c;
+  }
+
+  var sum = document.getElementById("summary");
+  R.tables.forEach(function (t) {
+    var c = counts(t), rows = t.comparison ? t.comparison.rows : null;
+    var tr = h("tr");
+    var td = h("td"); var link = h("a", null, t.name); link.href = "#" + t.name; td.appendChild(link); tr.appendChild(td);
+    tr.appendChild(h("td", null, rows ? fmt(rows.ours) + " / " + fmt(rows.reference) + (rows.status === "matched" ? "" : " (unexplained)") : "not compared"));
+    ["matched", "explained", "unexplained", "not compared"].forEach(function (k) { tr.appendChild(h("td", "num", String(c[k]))); });
+    sum.appendChild(tr);
+  });
+
+  var root = document.getElementById("tables");
+  R.tables.forEach(function (t) {
+    var c = counts(t), rows = t.comparison.rows;
+    var d = h("details", "tbl"); d.id = t.name;
+    var s = h("summary", null, t.name + " ");
+    s.appendChild(h("span", "muted", "· " + fmt(rows.ours) + " rows · " + c.matched + " match · " + c.explained + " explained · " + c.unexplained + " unexplained"));
+    d.appendChild(s);
+    var inner = h("div", "inner");
+
+    inner.appendChild(h("h3", null, "Compared with jaffle-shop"));
+    var wrap = h("div", "table-wrap"), tb = h("table", "data");
+    tb.innerHTML = "<thead><tr><th>Our column</th><th>jaffle-shop column</th><th>Result</th><th>Rows that differ</th><th>Why</th></tr></thead>";
+    var body = h("tbody");
+    t.comparison.columns.forEach(function (x) {
+      var tr = h("tr");
+      tr.appendChild(h("td", null, x.ours || "—"));
+      tr.appendChild(h("td", null, x.reference || "—"));
+      var cls = x.status === "not compared" ? "not" : x.status;
+      tr.appendChild(h("td", "status " + cls, LABEL[x.status] || x.status));
+      tr.appendChild(h("td", "num", fmt(x.differing_rows)));
+      var why = h("td"); why.appendChild(Site.textWithLines(x.reason || "")); tr.appendChild(why);
+      body.appendChild(tr);
+    });
+    tb.appendChild(body); wrap.appendChild(tb); inner.appendChild(wrap);
+
+    inner.appendChild(h("h3", null, "Each box next to the SQL it became"));
+    t.blocks.forEach(function (b) {
+      var title = h("p", "box-title");
+      title.appendChild(document.createTextNode(b.box + " · " + b.kind + " · "));
+      title.appendChild(h("a", "L", "L" + b.lines[0] + "–" + b.lines[1]));
+      if (b.note) title.appendChild(document.createTextNode(" · " + b.note));
+      Site.linkLines(title);
+      inner.appendChild(title);
+      var pair = h("div", "pair");
+      var left = h("div"); left.appendChild(h("h4", null, "XML"));
+      var pre = h("pre"); Site.renderCode(pre, b.xml); left.appendChild(pre);
+      var right = h("div"); right.appendChild(h("h4", null, "SQL"));
+      if (b.sql) { var sp = h("pre", "code plain", b.sql); right.appendChild(sp); }
+      else right.appendChild(h("p", "dropped", "No SQL: " + b.note + "."));
+      pair.appendChild(left); pair.appendChild(right);
+      inner.appendChild(pair);
+    });
+    d.appendChild(inner);
+    root.appendChild(d);
+  });
+  if (location.hash) { var open = document.getElementById(location.hash.slice(1)); if (open) open.open = true; }
+})();
+</script>
+</body>
+</html>
