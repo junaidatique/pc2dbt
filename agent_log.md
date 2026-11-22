@@ -11,7 +11,7 @@ Every prompt I gave the coding agent (Claude Code, model Opus 5.5), word for wor
 
 ### Prompt 1: Understand the problem first
 
-21 Nov 2026, 10:24 · typed
+21 Nov 2026, 10:24 · spoken
 
 **My prompt**
 
@@ -42,7 +42,7 @@ Every prompt I gave the coding agent (Claude Code, model Opus 5.5), word for wor
 
 ### Prompt 2: Feedback, decisions and the explainer site
 
-21 Nov 2026, 10:48 · typed
+21 Nov 2026, 10:48 · spoken
 
 **My prompt**
 
@@ -90,7 +90,7 @@ Nothing found.
 
 ### Prompt 4: Rename the 5-step page and start this log
 
-21 Nov 2026, 12:57 · typed
+21 Nov 2026, 12:57 · spoken
 
 **My prompt**
 
@@ -114,7 +114,7 @@ Nothing found.
 
 ### Prompt 5: Dig deep into the input XML
 
-21 Nov 2026, 13:19 · typed
+21 Nov 2026, 13:19 · spoken
 
 **My prompt**
 
@@ -139,7 +139,7 @@ Nothing found.
 
 ### Prompt 6: Two missed bugs, fixes, and every decision listed
 
-21 Nov 2026, 13:59 · typed
+21 Nov 2026, 13:59 · spoken
 
 **My prompt**
 
@@ -167,7 +167,7 @@ Nothing found.
 
 ### Prompt 7: Independent review of the XML
 
-21 Nov 2026, 14:36 · typed
+21 Nov 2026, 14:36 · spoken
 
 **My prompt**
 
@@ -205,7 +205,7 @@ Nothing found.
 
 ### Prompt 8: Two checks, all decisions, commit and build plan
 
-21 Nov 2026, 15:45 · typed
+21 Nov 2026, 15:45 · spoken
 
 **My prompt**
 
@@ -228,7 +228,7 @@ Nothing found.
 
 ### Prompt 9: Commit, plan changes, and build step 1 (staging end to end)
 
-21 Nov 2026, 16:08 · typed
+21 Nov 2026, 16:08 · spoken
 
 **My prompt**
 
@@ -258,7 +258,7 @@ Nothing found.
 
 ### Prompt 10: Step 1 reviewed, one question, and build step 2 (core marts)
 
-21 Nov 2026, 18:02 · typed
+21 Nov 2026, 18:02 · spoken
 
 **My prompt**
 
@@ -290,7 +290,7 @@ Nothing found.
 
 ### Prompt 11: Step 2 reviewed, the 190 rows, NULL groups, and two step 3 questions
 
-22 Nov 2026, 07:52 · typed
+22 Nov 2026, 07:52 · spoken
 
 **My prompt**
 
@@ -319,7 +319,7 @@ Nothing found.
 
 ### Prompt 12: Decisions for step 3, the RFM facts, and build step 3 (enriched marts)
 
-22 Nov 2026, 08:06 · typed
+22 Nov 2026, 08:06 · spoken
 
 **My prompt**
 
@@ -346,7 +346,7 @@ Nothing found.
 
 ### Prompt 13: The margins, and a plan for step 4
 
-22 Nov 2026, 08:38 · typed
+22 Nov 2026, 08:38 · spoken
 
 **My prompt**
 
@@ -372,7 +372,7 @@ Nothing found.
 
 ### Prompt 14: Step 3 approved, step 4 decisions, and build step 4 (unknown elements, README)
 
-22 Nov 2026, 09:12 · typed
+22 Nov 2026, 09:12 · spoken
 
 **My prompt**
 
@@ -399,7 +399,7 @@ Nothing found.
 
 ### Prompt 15: Three fixes before the step 4 commit (rounding row, repo URL, stale explainer pages)
 
-22 Nov 2026, 12:50 · typed
+22 Nov 2026, 12:50 · spoken
 
 **My prompt**
 
@@ -408,7 +408,7 @@ Nothing found.
 **Answer, in short**
 
 - Confirmed the rounding row first: `flags.md` has 79 flags of 10 kinds, and 25 of them are `rounds`, in 10 models. The README row now says "25 `rounds` flags in `flags.md`, in 10 models".
-- The repo you named, typed as github.com/jnetatik/pc2dpt, is `github.com/junaidatique/pc2dbt` (public, still empty), checked with `gh repo view`. The README's clone command now uses it.
+- The repo you named, transcribed as github.com/jnetatik/pc2dpt, is `github.com/junaidatique/pc2dbt` (public, still empty), checked with `gh repo view`. The README's clone command now uses it.
 - The "One mapping, end to end" page showed the SQL hand-written before the build. Section 4 now shows `out/models/m_fl_js_staging_full/stg_orders.sql` word for word, the `raw_orders` entry of `sources.yml`, and the first order from our build and jaffle-shop's (our `tax_paid_cents` is 0 and `subtotal_cents` 7, rounded by `NUMBER(15,0)`). It links to the Results page, which shows all three mappings box by box. A new section 5 lists what the page said before the build and what is true now.
 - That data comes from a new builder, `tools/docs/build_example_output.py`, and the row from a new reference test that writes `tests/reference/results/example_row.json`. A new test, `tests/test_docs_fresh.py`, rebuilds every generated docs file except the log and fails if one is stale. The other generated files were already current.
 - Searched every page for the same problem and fixed it: the five-steps page (the `date_trunc` line, "6 flags", the folder tree and two "still open" notes now read from the generated SQL or say what was decided), the overview (a "where it stands" note, check 3 for the enriched marts), and the glossary (enriched-mart twins, the Sorters, and a few lines from before the build).
@@ -424,6 +424,56 @@ Nothing found.
 | The explainer kept the SQL hand-written before the build: `date_trunc` for ORDERED_AT_DAY and 0.42 in `tax_paid_cents`, which really stores 0. The five-steps page, the overview and the glossary had the same kind of stale lines. Step 4's checks covered the README and code, not the pages. | You | You opened the "One mapping, end to end" page; the agent then searched every page. | Those pages read the generated files, a history section records the old version, and `tests/test_docs_fresh.py` fails when a generated docs file is stale. |
 | The new sources tab first said "5 more raw tables, then raw_orders"; `raw_orders` is the third of six. | Agent | Read the page back in the browser. | The builder lists the tables before and after `raw_orders` by name. |
 
+### Prompt 16: Repo confirmed, one wording change, and the step 4 commit
+
+22 Nov 2026, 13:38 · spoken
+
+**My prompt**
+
+> Yes, the GitHub repo is the right repo. My input voice got the name wrong. I will paste the link again at the bottom, so check that one. So I checked this round 139 unit test and 12 reference test pass on my side. The one mapping page now matches out, and the history section matches the old page. Good catch on the primary and foreign keys. There is one small change, however, on the one mapping page in section 5. The column references item to start with your answer in step 2. On a public page, a reviewer will read your as meaning themselves. Change it to decided in step 2. With that change, the commit is approved with these 24 files and this message.
+
+**Answer, in short**
+
+- The repo is confirmed as `github.com/junaidatique/pc2dbt`. No link came through at the bottom of the message, so the check stands on the earlier `gh repo view`.
+- Section 5 of the "One mapping, end to end" page now says "Decided in step 2" instead of "Your answer in step 2".
+- Committed step 4 as `01405e4`: the 24 files and the message you approved. Not pushed.
+- Time: about 2 minutes of agent time (from 13:38 UTC).
+
+**What the agent got wrong**
+
+| What went wrong | Caught by | How it was caught | What changed |
+|---|---|---|---|
+| Section 5 of the public "One mapping, end to end" page began an item with "Your answer in step 2". A reviewer would read "your" as meaning themselves. | You | You read the page as a reviewer would. | It says "Decided in step 2". |
+
+### Prompt 17: Labels, the cleaned conversation export, and the README
+
+22 Nov 2026, 13:51 · spoken
+
+**My prompt**
+
+> Yeah, I checked the commit 24 files, the message I approved, and decided in step 2 is in two fixes in the log. I spoke every prompt, so mark them all as spoken. The note at the top, agent underscore log dot md says so, and the typed labels contradicted. Leave the terminal command entry as it is. In the prompt 5 summary, typed it as there as I was speaking, so the GitHub repo was wrong, so it should say as transcribed as. The export conversation is for on the you know link below, path below. Clean it and add it to the repo. Remove the database passwords, the brief link, the email address, the other GitHub account name from the GH auth statuses output, and the recruiter name and email. Replace each one of the label like a credential removed. Never print the password while you do this. Put the conversation, the subagent transcript, and the tool result in conversation folder. Leave out the duplicate transcript and the two files metadata.json and local session state.json. They are app settings, not the conversation. Keep the cleaning script out of the repo because it would have a certain the things it removes. It would have to contain the things it removes. The scan and the whole repo for all of these and show me the counts. In the readme, say how to read the export, that it ends with the prompt 16 and that agent underscore log has every prompt word for word including the later one. Show me the files and the commit message before you commit.
+>
+> /Users/junaidatique/Downloads/session-export-1795355005656.zip
+
+**Answer, in short**
+
+- Every prompt is now marked spoken, as the note at the top says; the terminal command entry is unchanged. The prompt 15 summary says "transcribed as".
+- Unpacked the export in a scratch folder outside the repo and cleaned it into `conversation/`: the main transcript, the 5 subagent transcripts (with their small meta and prefix files) and the tool results (5 text files, 37 screenshots). Left out: the identical second transcript, `metadata.json`, `local-session-state.json` and the session title.
+- Removed, each replaced by a label: the database password (2 places), the brief link (25 full links and 3 copies of its ID on their own), your email (12), the other GitHub account name (8, including the agent's own `gh repo view` attempts), the recruiter's email (2) and name (18). Every value was read at run time from its source and never printed. Matches of the name inside screenshot data were left alone, so the images stay intact; none turned up there.
+- Checked every screenshot by the page it was taken on: 35 are our docs pages and 2 are Informatica's public docs; one with no address was viewed and is an early version of our overview page.
+- Scanned for all six kinds: the cleaned export, the 145 files the repo tracks or would add, and the 153 file versions in git history all have 0. The cleaning script stays in the scratch folder.
+- Found while checking: all 5 commits carry your email as author and committer, which is public once pushed. Not changed; it is your call.
+- README: a section on reading the export (layout, a `jq` command tested as written), that it ends with prompt 16, and that this log has every prompt including later ones; the context ran out three times, not twice.
+- Time: about 11 minutes of agent time (from 13:51 UTC).
+
+**What the agent got wrong**
+
+| What went wrong | Caught by | How it was caught | What changed |
+|---|---|---|---|
+| 14 prompts were labelled "typed", although this log's own note says the prompts were spoken; for prompt 16 the agent guessed "typed" again, and the prompt 15 summary said the repo name was "typed as". | You | You read the labels against the note. | All prompts are marked spoken except the terminal command; the summary says "transcribed as". |
+| The README said the session ran out of context twice; the export has a third automatic summary, on 22 Nov at 10:21 UTC. | Agent | Counted the summaries in the export while writing how to read it. | The README says three times, with the times. |
+| The first version of the check script counted the recruiter's name once per piece of text instead of once per file, so the raw export showed "20 files" for one file. | Agent | The number was impossible for a single file. | The script counts per file; the clean results (all 0) were unaffected. |
+
 ## Part 2: Things to watch
 
 Status: **open** means not decided or not done, **decided** means we agreed what to do, **handled** means it is done and checked.
@@ -432,7 +482,8 @@ Status: **open** means not decided or not done, **decided** means we agreed what
 
 | Watch | Why it matters | Status |
 |---|---|---|
-| The saved conversation contains the plaintext credential once (prompt 1, a command output). | The brief asks for the exported conversation. It must be cleaned before it is submitted. | open |
+| The saved conversation contains the plaintext credential once (prompt 1, a command output). | The brief asks for the exported conversation. Cleaned in prompt 17: `conversation/` has the credential, the brief link, the emails, the other account name and the recruiter's name replaced by labels, and a scan of every file and of git history finds none. | handled |
+| All commits carry my email as author and committer. | Pushing makes it public. Cleaning the export doesn't change commit metadata (prompt 17). | open |
 | The demo XML holds the credential. | It must never be committed. It stays in the ignored `external/` folder, and files are scanned before each commit. | handled |
 | Links shared in prompts. | They are replaced with `[link removed]` in this log. | handled |
 

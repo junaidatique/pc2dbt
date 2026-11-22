@@ -1,0 +1,456 @@
+## EXP_HIGH_BAND [Expression] L1817-1838
+  L1818 INPUT/OUTPUT  CUSTOMER_ID                  string(100,0) 
+  L1819 INPUT/OUTPUT  ORDERED_AT_DAY               date/time(29,9) 
+  L1820 INPUT/OUTPUT  ORDER_ID                     string(100,0) 
+  L1821 INPUT/OUTPUT  LOCATION_ID                  string(100,0) 
+  L1822 INPUT/OUTPUT  ORDER_SUBTOTAL               double(15,0) 
+  L1823 INPUT/OUTPUT  ORDER_TAX_PAID               double(15,0) 
+  L1824 INPUT/OUTPUT  ORDER_TOTAL                  decimal(12,2) 
+  L1825 INPUT/OUTPUT  ITEM_LINES                   decimal(10,0) 
+  L1826 INPUT/OUTPUT  ITEM_REVENUE                 decimal(12,2) 
+  L1827 INPUT/OUTPUT  ORDER_COGS                   decimal(12,2) 
+  L1828 INPUT/OUTPUT  ORDER_GROSS_PROFIT           decimal(12,2) 
+  L1829 INPUT/OUTPUT  ORDER_GROSS_MARGIN_PCT       decimal(10,4) 
+  L1830 INPUT/OUTPUT  EFFECTIVE_TAX_RATE           decimal(10,4) 
+  L1831 INPUT/OUTPUT  FOOD_ITEM_LINES              decimal(10,0) 
+  L1832 INPUT/OUTPUT  DRINK_ITEM_LINES             decimal(10,0) 
+  L1833 INPUT/OUTPUT  FOOD_SHARE_OF_LINES          decimal(10,4) 
+  L1834 INPUT/OUTPUT  DRINK_SHARE_OF_LINES         decimal(10,4) 
+  L1835 OUTPUT        ORDER_VALUE_BAND             string(20,0)   = "'HIGH'"
+  L1836 INPUT/OUTPUT  CUSTOMER_ORDER_NUMBER        decimal(10,0) 
+## EXP_STD_BAND [Expression] L1839-1860
+  L1840 INPUT/OUTPUT  CUSTOMER_ID                  string(100,0) 
+  L1841 INPUT/OUTPUT  ORDERED_AT_DAY               date/time(29,9) 
+  L1842 INPUT/OUTPUT  ORDER_ID                     string(100,0) 
+  L1843 INPUT/OUTPUT  LOCATION_ID                  string(100,0) 
+  L1844 INPUT/OUTPUT  ORDER_SUBTOTAL               double(15,0) 
+  L1845 INPUT/OUTPUT  ORDER_TAX_PAID               double(15,0) 
+  L1846 INPUT/OUTPUT  ORDER_TOTAL                  decimal(12,2) 
+  L1847 INPUT/OUTPUT  ITEM_LINES                   decimal(10,0) 
+  L1848 INPUT/OUTPUT  ITEM_REVENUE                 decimal(12,2) 
+  L1849 INPUT/OUTPUT  ORDER_COGS                   decimal(12,2) 
+  L1850 INPUT/OUTPUT  ORDER_GROSS_PROFIT           decimal(12,2) 
+  L1851 INPUT/OUTPUT  ORDER_GROSS_MARGIN_PCT       decimal(10,4) 
+  L1852 INPUT/OUTPUT  EFFECTIVE_TAX_RATE           decimal(10,4) 
+  L1853 INPUT/OUTPUT  FOOD_ITEM_LINES              decimal(10,0) 
+  L1854 INPUT/OUTPUT  DRINK_ITEM_LINES             decimal(10,0) 
+  L1855 INPUT/OUTPUT  FOOD_SHARE_OF_LINES          decimal(10,4) 
+  L1856 INPUT/OUTPUT  DRINK_SHARE_OF_LINES         decimal(10,4) 
+  L1857 OUTPUT        ORDER_VALUE_BAND             string(20,0)   = "'STANDARD'"
+  L1858 INPUT/OUTPUT  CUSTOMER_ORDER_NUMBER        decimal(10,0) 
+## UN_ORDER_BANDS [Custom Transformation] L1861-1978
+  L1862 GROUP OUTPUT OUTPUT expr=None
+  L1863 GROUP EXP_HIGH_BAND INPUT expr=None
+  L1864 GROUP EXP_STD_BAND INPUT expr=None
+  L1865 OUTPUT        ORDER_ID                     string(100,0) GROUP=OUTPUT
+  L1866 OUTPUT        CUSTOMER_ID                  string(100,0) GROUP=OUTPUT
+  L1867 OUTPUT        LOCATION_ID                  string(100,0) GROUP=OUTPUT
+  L1868 OUTPUT        ORDERED_AT_DAY               date/time(29,9) GROUP=OUTPUT
+  L1869 OUTPUT        ORDER_SUBTOTAL               decimal(12,2) GROUP=OUTPUT
+  L1870 OUTPUT        ORDER_TAX_PAID               decimal(12,2) GROUP=OUTPUT
+  L1871 OUTPUT        ORDER_TOTAL                  decimal(12,2) GROUP=OUTPUT
+  L1872 OUTPUT        ITEM_LINES                   decimal(10,0) GROUP=OUTPUT
+  L1873 OUTPUT        ITEM_REVENUE                 decimal(12,2) GROUP=OUTPUT
+  L1874 OUTPUT        ORDER_COGS                   decimal(12,2) GROUP=OUTPUT
+  L1875 OUTPUT        ORDER_GROSS_PROFIT           decimal(12,2) GROUP=OUTPUT
+  L1876 OUTPUT        ORDER_GROSS_MARGIN_PCT       decimal(10,4) GROUP=OUTPUT
+  L1877 OUTPUT        EFFECTIVE_TAX_RATE           decimal(10,4) GROUP=OUTPUT
+  L1878 OUTPUT        FOOD_ITEM_LINES              decimal(10,0) GROUP=OUTPUT
+  L1879 OUTPUT        DRINK_ITEM_LINES             decimal(10,0) GROUP=OUTPUT
+  L1880 OUTPUT        FOOD_SHARE_OF_LINES          decimal(10,4) GROUP=OUTPUT
+  L1881 OUTPUT        DRINK_SHARE_OF_LINES         decimal(10,4) GROUP=OUTPUT
+  L1882 OUTPUT        CUSTOMER_ORDER_NUMBER        decimal(10,0) GROUP=OUTPUT
+  L1883 OUTPUT        ORDER_VALUE_BAND             string(20,0) GROUP=OUTPUT
+  L1884 INPUT         ORDER_ID2                    string(100,0) GROUP=EXP_HIGH_BAND
+  L1885 INPUT         CUSTOMER_ID2                 string(100,0) GROUP=EXP_HIGH_BAND
+  L1886 INPUT         LOCATION_ID2                 string(100,0) GROUP=EXP_HIGH_BAND
+  L1887 INPUT         ORDERED_AT_DAY2              date/time(29,9) GROUP=EXP_HIGH_BAND
+  L1888 INPUT         ORDER_SUBTOTAL2              decimal(12,2) GROUP=EXP_HIGH_BAND
+  L1889 INPUT         ORDER_TAX_PAID2              decimal(12,2) GROUP=EXP_HIGH_BAND
+  L1890 INPUT         ORDER_TOTAL2                 decimal(12,2) GROUP=EXP_HIGH_BAND
+  L1891 INPUT         ITEM_LINES2                  decimal(10,0) GROUP=EXP_HIGH_BAND
+  L1892 INPUT         ITEM_REVENUE2                decimal(12,2) GROUP=EXP_HIGH_BAND
+  L1893 INPUT         ORDER_COGS2                  decimal(12,2) GROUP=EXP_HIGH_BAND
+  L1894 INPUT         ORDER_GROSS_PROFIT2          decimal(12,2) GROUP=EXP_HIGH_BAND
+  L1895 INPUT         ORDER_GROSS_MARGIN_PCT2      decimal(10,4) GROUP=EXP_HIGH_BAND
+  L1896 INPUT         EFFECTIVE_TAX_RATE2          decimal(10,4) GROUP=EXP_HIGH_BAND
+  L1897 INPUT         FOOD_ITEM_LINES2             decimal(10,0) GROUP=EXP_HIGH_BAND
+  L1898 INPUT         DRINK_ITEM_LINES2            decimal(10,0) GROUP=EXP_HIGH_BAND
+  L1899 INPUT         FOOD_SHARE_OF_LINES2         decimal(10,4) GROUP=EXP_HIGH_BAND
+  L1900 INPUT         DRINK_SHARE_OF_LINES2        decimal(10,4) GROUP=EXP_HIGH_BAND
+  L1901 INPUT         CUSTOMER_ORDER_NUMBER2       decimal(10,0) GROUP=EXP_HIGH_BAND
+  L1902 INPUT         ORDER_VALUE_BAND2            string(20,0) GROUP=EXP_HIGH_BAND
+  L1903 INPUT         ORDER_ID3                    string(100,0) GROUP=EXP_STD_BAND
+  L1904 INPUT         CUSTOMER_ID3                 string(100,0) GROUP=EXP_STD_BAND
+  L1905 INPUT         LOCATION_ID3                 string(100,0) GROUP=EXP_STD_BAND
+  L1906 INPUT         ORDERED_AT_DAY3              date/time(29,9) GROUP=EXP_STD_BAND
+  L1907 INPUT         ORDER_SUBTOTAL3              decimal(12,2) GROUP=EXP_STD_BAND
+  L1908 INPUT         ORDER_TAX_PAID3              decimal(12,2) GROUP=EXP_STD_BAND
+  L1909 INPUT         ORDER_TOTAL3                 decimal(12,2) GROUP=EXP_STD_BAND
+  L1910 INPUT         ITEM_LINES3                  decimal(10,0) GROUP=EXP_STD_BAND
+  L1911 INPUT         ITEM_REVENUE3                decimal(12,2) GROUP=EXP_STD_BAND
+  L1912 INPUT         ORDER_COGS3                  decimal(12,2) GROUP=EXP_STD_BAND
+  L1913 INPUT         ORDER_GROSS_PROFIT3          decimal(12,2) GROUP=EXP_STD_BAND
+  L1914 INPUT         ORDER_GROSS_MARGIN_PCT3      decimal(10,4) GROUP=EXP_STD_BAND
+  L1915 INPUT         EFFECTIVE_TAX_RATE3          decimal(10,4) GROUP=EXP_STD_BAND
+  L1916 INPUT         FOOD_ITEM_LINES3             decimal(10,0) GROUP=EXP_STD_BAND
+  L1917 INPUT         DRINK_ITEM_LINES3            decimal(10,0) GROUP=EXP_STD_BAND
+  L1918 INPUT         FOOD_SHARE_OF_LINES3         decimal(10,4) GROUP=EXP_STD_BAND
+  L1919 INPUT         DRINK_SHARE_OF_LINES3        decimal(10,4) GROUP=EXP_STD_BAND
+  L1920 INPUT         CUSTOMER_ORDER_NUMBER3       decimal(10,0) GROUP=EXP_STD_BAND
+  L1921 INPUT         ORDER_VALUE_BAND3            string(20,0) GROUP=EXP_STD_BAND
+  L1922 attr Language = 'C'
+  L1923 attr Module Identifier = 'pmuniontrans'
+  L1925 attr Function Identifier = 'pmunionfunc'
+  L1929 attr Inputs Must Block = 'NO'
+  L1930 attr Is Active = 'YES'
+  L1931 attr Update Strategy Transformation = 'NO'
+  L1933 attr Generate Transaction = 'NO'
+  L1934 attr Output Is Repeatable = 'Never'
+  L1935 attr Requires Single Thread Per Partition = 'NO'
+  L1936 attr Output Is Deterministic = 'YES'
+  L1937 attr Preserves Data Set Boundary = 'No'
+  L1938 INITPROP {'DESCRIPTION': '', 'NAME': 'Programmatic Identifier for Class Factory', 'USERDEFINED': 'NO', 'VALUE': ''}
+  L1939 INITPROP {'DESCRIPTION': '', 'NAME': 'Constructor', 'USERDEFINED': 'NO', 'VALUE': ''}
+  L1940 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_ID2', 'OUTPUTFIELD': 'ORDER_ID'}
+  L1941 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_ID3', 'OUTPUTFIELD': 'ORDER_ID'}
+  L1942 FIELDDEPENDENCY {'INPUTFIELD': 'CUSTOMER_ID2', 'OUTPUTFIELD': 'CUSTOMER_ID'}
+  L1943 FIELDDEPENDENCY {'INPUTFIELD': 'CUSTOMER_ID3', 'OUTPUTFIELD': 'CUSTOMER_ID'}
+  L1944 FIELDDEPENDENCY {'INPUTFIELD': 'LOCATION_ID2', 'OUTPUTFIELD': 'LOCATION_ID'}
+  L1945 FIELDDEPENDENCY {'INPUTFIELD': 'LOCATION_ID3', 'OUTPUTFIELD': 'LOCATION_ID'}
+  L1946 FIELDDEPENDENCY {'INPUTFIELD': 'ORDERED_AT_DAY2', 'OUTPUTFIELD': 'ORDERED_AT_DAY'}
+  L1947 FIELDDEPENDENCY {'INPUTFIELD': 'ORDERED_AT_DAY3', 'OUTPUTFIELD': 'ORDERED_AT_DAY'}
+  L1948 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_SUBTOTAL2', 'OUTPUTFIELD': 'ORDER_SUBTOTAL'}
+  L1949 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_SUBTOTAL3', 'OUTPUTFIELD': 'ORDER_SUBTOTAL'}
+  L1950 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_TAX_PAID2', 'OUTPUTFIELD': 'ORDER_TAX_PAID'}
+  L1951 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_TAX_PAID3', 'OUTPUTFIELD': 'ORDER_TAX_PAID'}
+  L1952 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_TOTAL2', 'OUTPUTFIELD': 'ORDER_TOTAL'}
+  L1953 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_TOTAL3', 'OUTPUTFIELD': 'ORDER_TOTAL'}
+  L1954 FIELDDEPENDENCY {'INPUTFIELD': 'ITEM_LINES2', 'OUTPUTFIELD': 'ITEM_LINES'}
+  L1955 FIELDDEPENDENCY {'INPUTFIELD': 'ITEM_LINES3', 'OUTPUTFIELD': 'ITEM_LINES'}
+  L1956 FIELDDEPENDENCY {'INPUTFIELD': 'ITEM_REVENUE2', 'OUTPUTFIELD': 'ITEM_REVENUE'}
+  L1957 FIELDDEPENDENCY {'INPUTFIELD': 'ITEM_REVENUE3', 'OUTPUTFIELD': 'ITEM_REVENUE'}
+  L1958 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_COGS2', 'OUTPUTFIELD': 'ORDER_COGS'}
+  L1959 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_COGS3', 'OUTPUTFIELD': 'ORDER_COGS'}
+  L1960 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_GROSS_PROFIT2', 'OUTPUTFIELD': 'ORDER_GROSS_PROFIT'}
+  L1961 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_GROSS_PROFIT3', 'OUTPUTFIELD': 'ORDER_GROSS_PROFIT'}
+  L1962 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_GROSS_MARGIN_PCT2', 'OUTPUTFIELD': 'ORDER_GROSS_MARGIN_PCT'}
+  L1963 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_GROSS_MARGIN_PCT3', 'OUTPUTFIELD': 'ORDER_GROSS_MARGIN_PCT'}
+  L1964 FIELDDEPENDENCY {'INPUTFIELD': 'EFFECTIVE_TAX_RATE2', 'OUTPUTFIELD': 'EFFECTIVE_TAX_RATE'}
+  L1965 FIELDDEPENDENCY {'INPUTFIELD': 'EFFECTIVE_TAX_RATE3', 'OUTPUTFIELD': 'EFFECTIVE_TAX_RATE'}
+  L1966 FIELDDEPENDENCY {'INPUTFIELD': 'FOOD_ITEM_LINES2', 'OUTPUTFIELD': 'FOOD_ITEM_LINES'}
+  L1967 FIELDDEPENDENCY {'INPUTFIELD': 'FOOD_ITEM_LINES3', 'OUTPUTFIELD': 'FOOD_ITEM_LINES'}
+  L1968 FIELDDEPENDENCY {'INPUTFIELD': 'DRINK_ITEM_LINES2', 'OUTPUTFIELD': 'DRINK_ITEM_LINES'}
+  L1969 FIELDDEPENDENCY {'INPUTFIELD': 'DRINK_ITEM_LINES3', 'OUTPUTFIELD': 'DRINK_ITEM_LINES'}
+  L1970 FIELDDEPENDENCY {'INPUTFIELD': 'FOOD_SHARE_OF_LINES2', 'OUTPUTFIELD': 'FOOD_SHARE_OF_LINES'}
+  L1971 FIELDDEPENDENCY {'INPUTFIELD': 'FOOD_SHARE_OF_LINES3', 'OUTPUTFIELD': 'FOOD_SHARE_OF_LINES'}
+  L1972 FIELDDEPENDENCY {'INPUTFIELD': 'DRINK_SHARE_OF_LINES2', 'OUTPUTFIELD': 'DRINK_SHARE_OF_LINES'}
+  L1973 FIELDDEPENDENCY {'INPUTFIELD': 'DRINK_SHARE_OF_LINES3', 'OUTPUTFIELD': 'DRINK_SHARE_OF_LINES'}
+  L1974 FIELDDEPENDENCY {'INPUTFIELD': 'CUSTOMER_ORDER_NUMBER2', 'OUTPUTFIELD': 'CUSTOMER_ORDER_NUMBER'}
+  L1975 FIELDDEPENDENCY {'INPUTFIELD': 'CUSTOMER_ORDER_NUMBER3', 'OUTPUTFIELD': 'CUSTOMER_ORDER_NUMBER'}
+  L1976 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_VALUE_BAND2', 'OUTPUTFIELD': 'ORDER_VALUE_BAND'}
+  L1977 FIELDDEPENDENCY {'INPUTFIELD': 'ORDER_VALUE_BAND3', 'OUTPUTFIELD': 'ORDER_VALUE_BAND'}
+## SRT_BEFORE_AGG [Sorter] L1979-1999
+  L1980 INPUT/OUTPUT  LOCATION_ID                  string(100,0) ISSORTKEY=YES
+  L1981 INPUT/OUTPUT  ORDER_ID                     string(100,0) 
+  L1982 INPUT/OUTPUT  CUSTOMER_ID                  string(100,0) 
+  L1983 INPUT/OUTPUT  ORDERED_AT_DAY               date/time(29,9) ISSORTKEY=YES
+  L1984 INPUT/OUTPUT  ORDER_TOTAL                  decimal(12,2) 
+  L1985 INPUT/OUTPUT  ORDER_SUBTOTAL               decimal(12,2) 
+  L1986 INPUT/OUTPUT  ORDER_TAX_PAID               decimal(12,2) 
+  L1987 INPUT/OUTPUT  ORDER_COGS                   decimal(12,2) 
+  L1988 INPUT/OUTPUT  ORDER_GROSS_PROFIT           decimal(12,2) 
+  L1989 INPUT/OUTPUT  ORDER_VALUE_BAND             string(20,0) 
+  L1993 attr Distinct = 'NO'
+## AGG_BY_LOCATION_DAY [Aggregator] L2000-2026
+  L2001 INPUT/OUTPUT  LOCATION_ID                  string(100,0) EXPRESSIONTYPE=GROUPBY
+  L2002 INPUT/OUTPUT  ORDERED_AT_DAY               date/time(29,9) EXPRESSIONTYPE=GROUPBY
+  L2003 OUTPUT        ORDERS_COUNT                 decimal(10,0)   = 'COUNT(ORDER_ID)'
+  L2004 OUTPUT        UNIQUE_CUSTOMERS             decimal(10,0)   = 'SUM(IS_FIRST_CUSTOMER)'
+  L2005 OUTPUT        REVENUE_TOTAL                decimal(12,2)   = 'SUM(ORDER_TOTAL)'
+  L2006 OUTPUT        SUBTOTAL_TOTAL               decimal(12,2)   = 'SUM(ORDER_SUBTOTAL)'
+  L2007 OUTPUT        TAX_TOTAL                    decimal(12,2)   = 'SUM(ORDER_TAX_PAID)'
+  L2008 OUTPUT        COGS_TOTAL                   decimal(12,2)   = 'SUM(ORDER_COGS)'
+  L2009 OUTPUT        GROSS_PROFIT_TOTAL           decimal(12,0)   = 'SUM(ORDER_GROSS_PROFIT)'
+  L2010 OUTPUT        HIGH_VALUE_ORDERS            decimal(10,0)   = "SUM(IIF(ORDER_VALUE_BAND = 'HIGH', 1, 0))"
+  L2011 INPUT         ORDER_ID                     string(100,0) 
+  L2012 INPUT         CUSTOMER_ID                  string(100,0) 
+  L2013 INPUT         ORDER_TOTAL                  decimal(12,2) 
+  L2014 INPUT         ORDER_SUBTOTAL               decimal(12,2) 
+  L2015 INPUT         ORDER_TAX_PAID               decimal(12,2) 
+  L2016 INPUT         ORDER_COGS                   decimal(12,2) 
+  L2017 INPUT         ORDER_GROSS_PROFIT           decimal(12,2) 
+  L2018 INPUT         ORDER_VALUE_BAND             string(20,0) 
+  L2019 INPUT         IS_FIRST_CUSTOMER            integer(10,0) 
+  L2022 attr Sorted Input = 'NO'
+## EXP_STORE_KPIS [Expression] L2027-2042
+  L2028 INPUT/OUTPUT  LOCATION_ID                  string(100,0) 
+  L2029 INPUT/OUTPUT  ORDERED_AT_DAY               date/time(29,9) 
+  L2030 INPUT/OUTPUT  ORDERS_COUNT                 decimal(10,0) 
+  L2031 INPUT/OUTPUT  UNIQUE_CUSTOMERS             decimal(10,0) 
+  L2032 INPUT/OUTPUT  REVENUE_TOTAL                decimal(12,2) 
+  L2033 INPUT/OUTPUT  SUBTOTAL_TOTAL               decimal(12,2) 
+  L2034 INPUT/OUTPUT  TAX_TOTAL                    decimal(12,2) 
+  L2035 INPUT/OUTPUT  COGS_TOTAL                   decimal(12,2) 
+  L2036 INPUT/OUTPUT  GROSS_PROFIT_TOTAL           decimal(12,2) 
+  L2037 INPUT/OUTPUT  HIGH_VALUE_ORDERS            decimal(10,4) 
+  L2038 OUTPUT        GROSS_MARGIN_PCT             decimal(10,4)   = 'IIF(SUBTOTAL_TOTAL = 0, 0, GROSS_PROFIT_TOTAL / SUBTOTAL_TOTAL)'
+  L2039 OUTPUT        AVG_ORDER_VALUE              decimal(12,2)   = 'IIF(ORDERS_COUNT = 0, 0, REVENUE_TOTAL / ORDERS_COUNT)'
+  L2040 OUTPUT        HIGH_VALUE_ORDERS_PCT        decimal(10,4)   = 'IIF(ORDERS_COUNT = 0, 0, HIGH_VALUE_ORDERS / ORDERS_COUNT)'
+## SQ_STG_LOCATIONS1 [Source Qualifier] L2043-2060
+  L2044 INPUT/OUTPUT  LOCATION_ID                  string(100,0) 
+  L2045 INPUT/OUTPUT  LOCATION_NAME                string(100,0) 
+  L2046 INPUT/OUTPUT  OPENED_DATE                  date/time(29,9) 
+  L2047 INPUT/OUTPUT  TAX_RATE                     decimal(6,4) 
+  L2048 INPUT/OUTPUT  REGION                       string(10,0) 
+  L2054 attr Select Distinct = 'NO'
+## JNR_ADD_LOCATION_INFO [Joiner] L2061-2090
+  L2062 INPUT/OUTPUT/MASTER LOCATION_ID                  string(100,0) 
+  L2063 INPUT/OUTPUT  LOCATION_NAME                string(100,0) 
+  L2064 INPUT/OUTPUT  REGION                       string(10,0) 
+  L2065 INPUT/OUTPUT/MASTER ORDERED_AT_DAY               date/time(29,9) 
+  L2066 INPUT/OUTPUT/MASTER ORDERS_COUNT                 decimal(10,0) 
+  L2067 INPUT/OUTPUT/MASTER UNIQUE_CUSTOMERS             decimal(10,0) 
+  L2068 INPUT/OUTPUT/MASTER REVENUE_TOTAL                decimal(12,2) 
+  L2069 INPUT/OUTPUT/MASTER SUBTOTAL_TOTAL               decimal(12,2) 
+  L2070 INPUT/OUTPUT/MASTER TAX_TOTAL                    decimal(12,2) 
+  L2071 INPUT/OUTPUT/MASTER COGS_TOTAL                   decimal(12,2) 
+  L2072 INPUT/OUTPUT/MASTER GROSS_PROFIT_TOTAL           decimal(12,2) 
+  L2073 INPUT/OUTPUT/MASTER GROSS_MARGIN_PCT             decimal(10,4) 
+  L2074 INPUT/OUTPUT/MASTER AVG_ORDER_VALUE              decimal(12,2) 
+  L2075 INPUT/OUTPUT/MASTER HIGH_VALUE_ORDERS            decimal(10,4) 
+  L2076 INPUT/OUTPUT/MASTER HIGH_VALUE_ORDERS_PCT        decimal(10,4) 
+  L2077 INPUT         LOCATION_ID1                 string(100,0) 
+  L2080 attr Join Condition = 'LOCATION_ID = LOCATION_ID1'
+  L2081 attr Join Type = 'Master Outer Join'
+  L2087 attr Sorted Input = 'NO'
+## SRT_FOR_DISTINCT_CUSTOMER [Sorter] L2091-2111
+  L2092 INPUT/OUTPUT  LOCATION_ID                  string(100,0) ISSORTKEY=YES
+  L2093 INPUT/OUTPUT  ORDERED_AT_DAY               date/time(29,9) ISSORTKEY=YES
+  L2094 INPUT/OUTPUT  CUSTOMER_ID                  string(100,0) ISSORTKEY=YES
+  L2095 INPUT/OUTPUT  ORDER_ID                     string(100,0) ISSORTKEY=YES
+  L2096 INPUT/OUTPUT  ORDER_TOTAL                  decimal(12,2) 
+  L2097 INPUT/OUTPUT  ORDER_SUBTOTAL               decimal(12,2) 
+  L2098 INPUT/OUTPUT  ORDER_TAX_PAID               decimal(12,2) 
+  L2099 INPUT/OUTPUT  ORDER_COGS                   decimal(12,2) 
+  L2100 INPUT/OUTPUT  ORDER_GROSS_PROFIT           decimal(12,2) 
+  L2101 INPUT/OUTPUT  ORDER_VALUE_BAND             string(20,0) 
+  L2105 attr Distinct = 'NO'
+## EXP_MARK_FIRST_CUSTOMER [Expression] L2112-2129
+  L2113 INPUT/OUTPUT  LOCATION_ID                  string(100,0) 
+  L2114 INPUT/OUTPUT  ORDERED_AT_DAY               date/time(29,9) 
+  L2115 INPUT/OUTPUT  CUSTOMER_ID                  string(100,0) 
+  L2116 INPUT/OUTPUT  ORDER_ID                     string(100,0) 
+  L2117 INPUT/OUTPUT  ORDER_TOTAL                  decimal(12,2) 
+  L2118 INPUT/OUTPUT  ORDER_SUBTOTAL               decimal(12,2) 
+  L2119 INPUT/OUTPUT  ORDER_TAX_PAID               decimal(12,2) 
+  L2120 INPUT/OUTPUT  ORDER_COGS                   decimal(12,2) 
+  L2121 INPUT/OUTPUT  ORDER_GROSS_PROFIT           decimal(12,2) 
+  L2122 INPUT/OUTPUT  ORDER_VALUE_BAND             string(20,0) 
+  L2123 OUTPUT        IS_FIRST_CUSTOMER            integer(10,0)   = 'v_IS_FIRST_CUSTOMER'
+  L2124 LOCAL VARIABLE v_PREV_LOCATION              string(100,0)   = 'LOCATION_ID'
+  L2125 LOCAL VARIABLE v_PREV_DAY                   date/time(29,9)   = 'ORDERED_AT_DAY'
+  L2126 LOCAL VARIABLE v_PREV_CUSTOMER              string(100,0)   = 'CUSTOMER_ID'
+  L2127 LOCAL VARIABLE v_IS_FIRST_CUSTOMER          integer(10,0)   = 'IIF(v_PREV_LOCATION = LOCATION_ID AND v_PREV_DAY = ORDERED_AT_DAY AND v_PREV_CUSTOMER = CUSTOMER_ID, 0, 1)'
+## SRT_BEFORE_AGG_PDP [Sorter] L2130-2149
+  L2131 INPUT/OUTPUT  PRODUCT_ID                   string(50,0) ISSORTKEY=YES
+  L2132 INPUT/OUTPUT  PRODUCT_NAME                 string(100,0) 
+  L2133 INPUT/OUTPUT  PRODUCT_TYPE                 string(50,0) 
+  L2134 INPUT/OUTPUT  ORDERED_AT_DAY               date/time(29,9) ISSORTKEY=YES
+  L2135 INPUT/OUTPUT  ORDER_ITEM_ID                string(100,0) 
+  L2136 INPUT/OUTPUT  ITEM_REVENUE                 decimal(12,2) 
+  L2137 INPUT/OUTPUT  ITEM_COGS                    decimal(12,2) 
+  L2138 INPUT/OUTPUT  ITEM_GROSS_PROFIT            decimal(12,2) 
+  L2139 INPUT/OUTPUT  HAS_PERISHABLE_SUPPLY        decimal(1,0) 
+  L2143 attr Distinct = 'NO'
+## AGG_BY_PRODUCT_DAY [Aggregator] L2150-2171
+  L2151 INPUT/OUTPUT  PRODUCT_ID                   string(50,0) EXPRESSIONTYPE=GROUPBY
+  L2152 INPUT/OUTPUT  PRODUCT_NAME                 string(100,0) EXPRESSIONTYPE=GROUPBY
+  L2153 INPUT/OUTPUT  PRODUCT_TYPE                 string(50,0) EXPRESSIONTYPE=GROUPBY
+  L2154 INPUT/OUTPUT  ORDERED_AT_DAY               date/time(29,9) EXPRESSIONTYPE=GROUPBY
+  L2155 OUTPUT        UNITS_SOLD                   integer(10,0)   = 'COUNT(ORDER_ITEM_ID)'
+  L2156 OUTPUT        REVENUE                      decimal(12,2)   = 'SUM(ITEM_REVENUE)'
+  L2157 OUTPUT        COGS                         decimal(12,2)   = 'SUM(ITEM_COGS)'
+  L2158 OUTPUT        GROSS_PROFIT                 decimal(12,2)   = 'SUM(ITEM_GROSS_PROFIT)'
+  L2159 OUTPUT        PERISHABLE_SALES_FLAG        integer(10,0)   = 'MAX(HAS_PERISHABLE_SUPPLY)'
+  L2160 INPUT         ORDER_ITEM_ID                string(100,0) 
+  L2161 INPUT         ITEM_REVENUE                 decimal(12,2) 
+  L2162 INPUT         ITEM_COGS                    decimal(12,2) 
+  L2163 INPUT         ITEM_GROSS_PROFIT            decimal(12,2) 
+  L2164 INPUT         HAS_PERISHABLE_SUPPLY        decimal(1,0) 
+  L2167 attr Sorted Input = 'NO'
+## EXP_PRODUCT_METRICS [Expression] L2172-2184
+  L2173 INPUT/OUTPUT  PRODUCT_ID                   string(50,0) 
+  L2174 INPUT/OUTPUT  PRODUCT_NAME                 string(100,0) 
+  L2175 INPUT/OUTPUT  PRODUCT_TYPE                 string(50,0) 
+  L2176 INPUT/OUTPUT  ORDERED_AT_DAY               date/time(29,9) 
+  L2177 INPUT/OUTPUT  UNITS_SOLD                   integer(10,0) 
+  L2178 INPUT/OUTPUT  REVENUE                      decimal(12,2) 
+  L2179 INPUT/OUTPUT  COGS                         decimal(12,2) 
+  L2180 INPUT/OUTPUT  GROSS_PROFIT                 decimal(12,2) 
+  L2181 INPUT/OUTPUT  PERISHABLE_SALES_FLAG        integer(10,0) 
+  L2182 OUTPUT        MARGIN_PCT                   decimal(10,4)   = 'IIF(REVENUE=0,0,GROSS_PROFIT/REVENUE)'
+## AGGTRANS [Aggregator] L2185-2211
+  L2186 INPUT/OUTPUT  CUSTOMER_ID                  string(100,0) EXPRESSIONTYPE=GROUPBY
+  L2187 OUTPUT        COUNT_LIFETIME_ORDERS        integer(10,0)   = 'COUNT(ORDER_ID)'
+  L2188 OUTPUT        FIRST_ORDERED_AT             date/time(29,9)   = 'MIN(ORDERED_AT_DAY)'
+  L2189 OUTPUT        LAST_ORDERED_AT              date/time(29,9)   = 'MAX(ORDERED_AT_DAY)'
+  L2190 OUTPUT        LIFETIME_SPEND               decimal(12,2)   = 'SUM(ORDER_TOTAL)'
+  L2191 OUTPUT        LIFETIME_SPEND_PRETAX        decimal(12,2)   = 'SUM(ORDER_SUBTOTAL)'
+  L2192 OUTPUT        LIFETIME_TAX_PAID            decimal(12,2)   = 'SUM(ORDER_TAX_PAID)'
+  L2193 OUTPUT        LIFETIME_COGS                decimal(12,2)   = 'SUM(ORDER_COGS)'
+  L2194 OUTPUT        LIFETIME_GROSS_PROFIT        decimal(12,2)   = 'SUM(ORDER_GROSS_PROFIT)'
+  L2195 OUTPUT        HIGH_VALUE_ORDERS            integer(10,0)   = "SUM(IIF(ORDER_VALUE_BAND = 'HIGH', 1, 0))"
+  L2196 INPUT         ORDER_ID                     string(100,0) 
+  L2197 INPUT         ORDERED_AT_DAY               date/time(29,9) 
+  L2198 INPUT         ORDER_SUBTOTAL               decimal(12,2) 
+  L2199 INPUT         ORDER_TAX_PAID               decimal(12,2) 
+  L2200 INPUT         ORDER_TOTAL                  decimal(12,2) 
+  L2201 INPUT         ORDER_COGS                   decimal(12,2) 
+  L2202 INPUT         ORDER_GROSS_PROFIT           decimal(12,2) 
+  L2203 INPUT         ORDER_GROSS_MARGIN_PCT       decimal(10,4) 
+  L2204 INPUT         ORDER_VALUE_BAND             string(20,0) 
+  L2207 attr Sorted Input = 'NO'
+## SQ_STG_CUSTOMERS1 [Source Qualifier] L2212-2226
+  L2213 INPUT/OUTPUT  CUSTOMER_ID                  string(100,0) 
+  L2214 INPUT/OUTPUT  CUSTOMER_NAME                string(200,0) 
+  L2220 attr Select Distinct = 'NO'
+## JNR_CUSTOMERS [Joiner] L2227-2252
+  L2228 INPUT/OUTPUT  CUSTOMER_ID                  string(100,0) 
+  L2229 INPUT/OUTPUT  COUNT_LIFETIME_ORDERS        integer(10,0) 
+  L2230 INPUT/OUTPUT  FIRST_ORDERED_AT             date/time(29,9) 
+  L2231 INPUT/OUTPUT  LAST_ORDERED_AT              date/time(29,9) 
+  L2232 INPUT/OUTPUT  LIFETIME_SPEND               decimal(12,2) 
+  L2233 INPUT/OUTPUT  LIFETIME_SPEND_PRETAX        decimal(12,2) 
+  L2234 INPUT/OUTPUT  LIFETIME_TAX_PAID            decimal(12,2) 
+  L2235 INPUT/OUTPUT  LIFETIME_COGS                decimal(12,2) 
+  L2236 INPUT/OUTPUT  LIFETIME_GROSS_PROFIT        decimal(12,2) 
+  L2237 INPUT/OUTPUT  HIGH_VALUE_ORDERS            integer(10,0) 
+  L2238 INPUT/OUTPUT/MASTER CUSTOMER_NAME                string(200,0) 
+  L2239 INPUT/MASTER  CUSTOMER_ID1                 string(100,0) 
+  L2242 attr Join Condition = 'CUSTOMER_ID1 = CUSTOMER_ID'
+  L2243 attr Join Type = 'Master Outer Join'
+  L2249 attr Sorted Input = 'NO'
+## EXP_CUSTOMER_METRICS [Expression] L2253-2284
+  L2254 INPUT/OUTPUT  CUSTOMER_ID                  string(100,0) 
+  L2255 INPUT/OUTPUT  CUSTOMER_NAME                string(200,0) 
+  L2256 OUTPUT        COUNT_LIFETIME_ORDERS        integer(10,0)   = 'COUNT_LIFETIME_ORDERS_IN'
+  L2257 OUTPUT        FIRST_ORDERED_AT             date/time(29,9)   = 'FIRST_ORDERED_AT_IN'
+  L2258 OUTPUT        LAST_ORDERED_AT              date/time(29,9)   = 'LAST_ORDERED_AT_IN'
+  L2259 OUTPUT        LIFETIME_SPEND               decimal(12,2)   = 'v_SPEND_CL'
+  L2260 OUTPUT        LIFETIME_SPEND_PRETAX        decimal(12,2)   = 'v_SPEND_PRETAX_CL'
+  L2261 OUTPUT        LIFETIME_TAX_PAID            decimal(12,2)   = 'v_TAX_CL'
+  L2262 OUTPUT        LIFETIME_COGS                decimal(12,2)   = 'v_COGS_CL'
+  L2263 OUTPUT        LIFETIME_GROSS_PROFIT        decimal(12,2)   = 'v_PROFIT_CL'
+  L2264 OUTPUT        AVG_ORDER_VALUE              decimal(12,2)   = 'IIF(v_ORDERS_CL=0,0,v_SPEND_CL/v_ORDERS_CL)'
+  L2265 OUTPUT        HIGH_VALUE_ORDERS            integer(10,0)   = 'v_HIGH_VALUE_CL'
+  L2266 OUTPUT        CUSTOMER_TYPE                string(20,0)   = "IIF(v_ORDERS_CL>1,'returning','new')"
+  L2267 LOCAL VARIABLE v_ORDERS_CL                  integer(10,0)   = 'IIF(ISNULL(COUNT_LIFETIME_ORDERS_IN),0,COUNT_LIFETIME_ORDERS_IN)'
+  L2268 LOCAL VARIABLE v_SPEND_CL                   decimal(12,2)   = 'IIF(ISNULL(LIFETIME_SPEND_IN),0,LIFETIME_SPEND_IN)'
+  L2269 LOCAL VARIABLE v_SPEND_PRETAX_CL            decimal(12,2)   = 'IIF(ISNULL(LIFETIME_SPEND_PRETAX_IN),0,LIFETIME_SPEND_PRETAX_IN)'
+  L2270 LOCAL VARIABLE v_TAX_CL                     decimal(12,2)   = 'IIF(ISNULL(LIFETIME_TAX_PAID_IN),0,LIFETIME_TAX_PAID_IN)'
+  L2271 LOCAL VARIABLE v_COGS_CL                    decimal(12,2)   = 'IIF(ISNULL(LIFETIME_COGS_IN),0,LIFETIME_COGS_IN)'
+  L2272 LOCAL VARIABLE v_PROFIT_CL                  decimal(12,2)   = 'IIF(ISNULL(LIFETIME_GROSS_PROFIT_IN),0,LIFETIME_GROSS_PROFIT_IN)'
+  L2273 LOCAL VARIABLE v_HIGH_VALUE_CL              integer(10,0)   = 'IIF(ISNULL(HIGH_VALUE_ORDERS_IN),0,HIGH_VALUE_ORDERS_IN)'
+  L2274 INPUT         COUNT_LIFETIME_ORDERS_IN     integer(10,0) 
+  L2275 INPUT         FIRST_ORDERED_AT_IN          date/time(29,9) 
+  L2276 INPUT         LAST_ORDERED_AT_IN           date/time(29,9) 
+  L2277 INPUT         LIFETIME_SPEND_IN            decimal(12,2) 
+  L2278 INPUT         LIFETIME_SPEND_PRETAX_IN     decimal(12,2) 
+  L2279 INPUT         LIFETIME_TAX_PAID_IN         decimal(12,2) 
+  L2280 INPUT         LIFETIME_COGS_IN             decimal(12,2) 
+  L2281 INPUT         LIFETIME_GROSS_PROFIT_IN     decimal(12,2) 
+  L2282 INPUT         HIGH_VALUE_ORDERS_IN         integer(10,0) 
+## EXP_RECENCY1 [Expression] L2285-2302
+  L2286 INPUT/OUTPUT  CUSTOMER_ID                  string(100,0) 
+  L2287 INPUT/OUTPUT  CUSTOMER_NAME                string(200,0) 
+  L2288 INPUT/OUTPUT  COUNT_LIFETIME_ORDERS        integer(10,0) 
+  L2289 INPUT/OUTPUT  FIRST_ORDERED_AT             date/time(29,9) 
+  L2290 INPUT/OUTPUT  LAST_ORDERED_AT              date/time(29,9) 
+  L2291 INPUT/OUTPUT  LIFETIME_SPEND               decimal(12,2) 
+  L2292 INPUT/OUTPUT  LIFETIME_SPEND_PRETAX        decimal(12,2) 
+  L2293 INPUT/OUTPUT  LIFETIME_TAX_PAID            decimal(12,2) 
+  L2294 INPUT/OUTPUT  LIFETIME_COGS                decimal(12,2) 
+  L2295 INPUT/OUTPUT  LIFETIME_GROSS_PROFIT        decimal(12,2) 
+  L2296 INPUT/OUTPUT  AVG_ORDER_VALUE              decimal(12,2) 
+  L2297 INPUT/OUTPUT  HIGH_VALUE_ORDERS            integer(10,0) 
+  L2298 INPUT/OUTPUT  CUSTOMER_TYPE                string(20,0) 
+  L2299 OUTPUT        RECENCY_DAYS_TEMP            integer(10,0)   = 'v_RECENCY_DAYS'
+  L2300 LOCAL VARIABLE v_RECENCY_DAYS               integer(10,0)   = "IIF(ISNULL(LAST_ORDERED_AT), \r\n                    9999, \r\n                    DATE_DIFF(TRUNC($$RUN_DATE), TRUNC(LAST_ORDERED_AT), 'DD'))"
+## EXP_RECENCY2 [Expression] L2303-2321
+  L2304 INPUT/OUTPUT  CUSTOMER_ID                  string(100,0) 
+  L2305 INPUT/OUTPUT  CUSTOMER_NAME                string(200,0) 
+  L2306 INPUT/OUTPUT  COUNT_LIFETIME_ORDERS        integer(10,0) 
+  L2307 INPUT/OUTPUT  FIRST_ORDERED_AT             date/time(29,9) 
+  L2308 INPUT/OUTPUT  LAST_ORDERED_AT              date/time(29,9) 
+  L2309 INPUT/OUTPUT  LIFETIME_SPEND               decimal(12,2) 
+  L2310 INPUT/OUTPUT  LIFETIME_SPEND_PRETAX        decimal(12,2) 
+  L2311 INPUT/OUTPUT  LIFETIME_TAX_PAID            decimal(12,2) 
+  L2312 INPUT/OUTPUT  LIFETIME_COGS                decimal(12,2) 
+  L2313 INPUT/OUTPUT  LIFETIME_GROSS_PROFIT        decimal(12,2) 
+  L2314 INPUT/OUTPUT  AVG_ORDER_VALUE              decimal(12,2) 
+  L2315 INPUT/OUTPUT  HIGH_VALUE_ORDERS            integer(10,0) 
+  L2316 INPUT/OUTPUT  CUSTOMER_TYPE                string(20,0) 
+  L2317 OUTPUT        RECENCY_DAYS                 integer(10,0)   = 'v_RECENCY_FINAL'
+  L2318 LOCAL VARIABLE v_RECENCY_FINAL              integer(10,0)   = "IIF(ISNULL(LAST_ORDERED_AT), \r\n                    9999, \r\n                    DATE_DIFF(TRUNC($$RUN_DATE), TRUNC(LAST_ORDERED_AT), 'DD'))"
+  L2319 INPUT         RECENCY_DAYS_TEMP            integer(10,0) 
+## EXP_RFM_SCORES [Expression] L2322-2345
+  L2323 INPUT/OUTPUT  CUSTOMER_ID                  string(100,0) 
+  L2324 INPUT/OUTPUT  CUSTOMER_NAME                string(200,0) 
+  L2325 INPUT/OUTPUT  COUNT_LIFETIME_ORDERS        integer(10,0) 
+  L2326 INPUT/OUTPUT  FIRST_ORDERED_AT             date/time(29,9) 
+  L2327 INPUT/OUTPUT  LAST_ORDERED_AT              date/time(29,9) 
+  L2328 INPUT/OUTPUT  LIFETIME_SPEND               decimal(12,2) 
+  L2329 INPUT/OUTPUT  LIFETIME_SPEND_PRETAX        decimal(12,2) 
+  L2330 INPUT/OUTPUT  LIFETIME_TAX_PAID            decimal(12,2) 
+  L2331 INPUT/OUTPUT  LIFETIME_COGS                decimal(12,2) 
+  L2332 INPUT/OUTPUT  LIFETIME_GROSS_PROFIT        decimal(12,2) 
+  L2333 INPUT/OUTPUT  AVG_ORDER_VALUE              decimal(12,2) 
+  L2334 INPUT/OUTPUT  HIGH_VALUE_ORDERS            integer(10,0) 
+  L2335 INPUT/OUTPUT  CUSTOMER_TYPE                string(20,0) 
+  L2336 INPUT/OUTPUT  RECENCY_DAYS                 integer(10,0) 
+  L2337 OUTPUT        R_SCORE                      integer(10,0)   = 'v_R_SCORE'
+  L2338 OUTPUT        F_SCORE                      integer(10,0)   = 'v_F_SCORE'
+  L2339 OUTPUT        M_SCORE                      integer(10,0)   = 'v_M_SCORE'
+  L2340 OUTPUT        RFM_SCORE                    integer(10,0)   = '(v_R_SCORE*100)+(v_F_SCORE*10)+v_M_SCORE'
+  L2341 LOCAL VARIABLE v_R_SCORE                    integer(10,0)   = 'IIF(RECENCY_DAYS<=30,3,IIF(RECENCY_DAYS<=90,2,1))'
+  L2342 LOCAL VARIABLE v_F_SCORE                    integer(10,0)   = 'IIF(COUNT_LIFETIME_ORDERS>=5,3,IIF(COUNT_LIFETIME_ORDERS>=2,2,1))'
+  L2343 LOCAL VARIABLE v_M_SCORE                    integer(10,0)   = 'IIF(LIFETIME_SPEND>=200,3,IIF(LIFETIME_SPEND>=50,2,1))'
+## EXP_RFM_SEGMENT [Expression] L2346-2368
+  L2347 INPUT/OUTPUT  CUSTOMER_ID                  string(100,0) 
+  L2348 INPUT/OUTPUT  CUSTOMER_NAME                string(200,0) 
+  L2349 INPUT/OUTPUT  COUNT_LIFETIME_ORDERS        integer(10,0) 
+  L2350 INPUT/OUTPUT  FIRST_ORDERED_AT             date/time(29,9) 
+  L2351 INPUT/OUTPUT  LAST_ORDERED_AT              date/time(29,9) 
+  L2352 INPUT/OUTPUT  LIFETIME_SPEND               decimal(12,2) 
+  L2353 INPUT/OUTPUT  LIFETIME_SPEND_PRETAX        decimal(12,2) 
+  L2354 INPUT/OUTPUT  LIFETIME_TAX_PAID            decimal(12,2) 
+  L2355 INPUT/OUTPUT  LIFETIME_COGS                decimal(12,2) 
+  L2356 INPUT/OUTPUT  LIFETIME_GROSS_PROFIT        decimal(12,2) 
+  L2357 INPUT/OUTPUT  AVG_ORDER_VALUE              decimal(12,2) 
+  L2358 INPUT/OUTPUT  HIGH_VALUE_ORDERS            integer(10,0) 
+  L2359 INPUT/OUTPUT  CUSTOMER_TYPE                string(20,0) 
+  L2360 INPUT/OUTPUT  RECENCY_DAYS                 integer(10,0) 
+  L2361 INPUT/OUTPUT  R_SCORE                      integer(10,0) 
+  L2362 INPUT/OUTPUT  F_SCORE                      integer(10,0) 
+  L2363 INPUT/OUTPUT  M_SCORE                      integer(10,0) 
+  L2364 INPUT/OUTPUT  RFM_SCORE                    integer(10,0) 
+  L2365 OUTPUT        RFM_SEGMENT                  string(20,0)   = 'v_SEGMENT'
+  L2366 LOCAL VARIABLE v_SEGMENT                    string(20,0)   = "IIF(COUNT_LIFETIME_ORDERS=0,'PROSPECT',IIF(RFM_SCORE=333,'CHAMPION',IIF(R_SCORE=3 AND F_SCORE>=2 AND M_SCORE>=2,'LOYAL',IIF(R_SCORE=1 AND F_SCORE>=2,'AT_RISK','STANDARD'))))"
+## FIL_LOCS [Filter] L2369-2387
+  L2370 INPUT/OUTPUT  LOCATION_ID                  string(100,0) 
+  L2371 INPUT/OUTPUT  LOCATION_NAME                string(100,0) 
+  L2372 INPUT/OUTPUT  REGION                       string(10,0) 
+  L2373 INPUT/OUTPUT  ORDERED_AT_DAY               date/time(29,9) 
+  L2374 INPUT/OUTPUT  ORDERS_COUNT                 decimal(10,0) 
+  L2375 INPUT/OUTPUT  UNIQUE_CUSTOMERS             decimal(10,0) 
+  L2376 INPUT/OUTPUT  REVENUE_TOTAL                decimal(12,2) 
+  L2377 INPUT/OUTPUT  SUBTOTAL_TOTAL               decimal(12,2) 
+  L2378 INPUT/OUTPUT  TAX_TOTAL                    decimal(12,2) 
+  L2379 INPUT/OUTPUT  COGS_TOTAL                   decimal(12,2) 
+  L2380 INPUT/OUTPUT  GROSS_PROFIT_TOTAL           decimal(12,2) 
+  L2381 INPUT/OUTPUT  GROSS_MARGIN_PCT             decimal(10,4) 
+  L2382 INPUT/OUTPUT  AVG_ORDER_VALUE              decimal(12,2) 
+  L2383 INPUT/OUTPUT  HIGH_VALUE_ORDERS            decimal(10,4) 
+  L2384 INPUT/OUTPUT  HIGH_VALUE_ORDERS_PCT        decimal(10,4) 
+  L2385 attr Filter Condition = 'NOT ISNULL(LOCATION_ID)'

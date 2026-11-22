@@ -176,7 +176,7 @@ in `flags.md`; numbers are on the seed data.
 ## Where the agent got things wrong, and how it was caught
 
 [`agent_log.md`](agent_log.md) lists every mistake, prompt by prompt: what went wrong, who caught it, how,
-and what changed. 13 were caught by me and 47 by the agent, which includes two independent
+and what changed. 15 were caught by me and 49 by the agent, which includes two independent
 checks it ran in separate agents (prompts 7 and 13). Some that mattered:
 
 - **Said there were 389 expressions to handle;** most are pass-throughs (about 270), and about 120 have real
@@ -205,14 +205,38 @@ independently, on my own. [`agent_log.md`](agent_log.md) keeps every prompt word
 from the first one. They were spoken and transcribed, so they keep the filler words, and links I shared are
 replaced with `[link removed]`. The log also has a short summary of each answer and the mistakes.
 
-The coding session ran out of context twice (21 Nov 2026, at 12:53 and 17:26 UTC) and continued from
-automatic summaries. Both summaries are in the exported conversation.
+The coding session ran out of context three times (21 Nov 2026 at 12:53 and 17:26 UTC, 22 Nov at 10:21
+UTC) and continued from automatic summaries. All three summaries are in the exported conversation, on the
+lines marked `"isCompactSummary": true`.
 
 ## Exported conversation
 
-The cleaned export of the whole coding conversation is added at the end of the work. The plaintext
-credential (it appears once, in a command output in prompt 1) and the brief's link are removed. The result
-is checked with the same scan that guards the log page.
+[`conversation/`](conversation/) holds the cleaned export of the coding session. It ends with prompt 16,
+where I approved the step 4 commit. [`agent_log.md`](agent_log.md) has every prompt word for word,
+including the ones after the export.
+
+- `transcript.jsonl` is the main conversation: one JSON object per line, in order. Lines with
+  `"type": "user"` hold my prompts and the tool results; lines with `"type": "assistant"` hold the agent's
+  replies and tool calls. The other types are the app's own records and can be skipped.
+- `subagents/` holds the 5 agents the session started, each a `.jsonl` transcript with a `.meta.json`
+  naming its task: the jaffle-shop probe, the blind review of the XML, the check of 20 claims about the XML,
+  the reader of Informatica's docs, and the independent check of step 3.
+- `tool-results/` holds long command outputs and browser screenshots that the transcript names by file.
+
+To read the conversation as plain text, prompts and replies only:
+
+```bash
+jq -r 'select(.type=="user" or .type=="assistant") | select(.isMeta != true) | .message.content | if type=="string" then . else (map(select(.type=="text") | .text) | join("\n")) end | select(length > 0)' conversation/transcript.jsonl | less
+```
+
+Before it was added, these were removed and each replaced by a label: the database password in the
+workflow's command task (`[credential removed]`), the brief's link (`[brief link removed]`), my email
+address (`[email removed]`), another GitHub account name shown by `gh auth status`
+(`[account name removed]`), and the recruiter's name and email (`[recruiter name removed]`,
+`[recruiter email removed]`). Left out: a second, identical copy of the transcript and the app's own files
+(`metadata.json`, `local-session-state.json` and the session title). A scan of every file in the repo and of
+every file version in git history finds none of the removed values. The cleaning script isn't in the repo,
+because it has to know the values it removes.
 
 ## Process
 
@@ -246,7 +270,8 @@ reading and checking time between prompts isn't included.
 | Step 2: core marts | 10-11 | 33 min | 1 h 15 min |
 | Step 3: enriched marts | 12-13 | 35 min | 1 h |
 | Step 4: unknown elements, README, fresh-clone check | 14 | about 15 min | 1 h |
-| Fixes after step 4: README, repo URL, explainer pages | 15 | about 17 min | |
-| **Total** | 1-15 | **about 3 h 48 min** | 4 h 15 min (steps 1-4) |
+| Fixes after step 4: README, repo URL, explainer pages | 15-16 | about 19 min | |
+| Cleaning and adding the exported conversation | 17 | about 11 min | |
+| **Total** | 1-17 | **about 4 h 01 min** | 4 h 15 min (steps 1-4) |
 
-My own time on the task: (I'll fill this in).
+My own time on the task: about 8 hours: about 1 hour on 18 and 19 Nov reading the brief, and about 7 hours on 21 and 22 Nov reading the agent's answers, checking them and writing my prompts.
