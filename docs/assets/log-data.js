@@ -754,6 +754,38 @@ window.AGENT_LOG = {
     }
    ],
    "noneNote": ""
+  },
+  {
+   "n": 18,
+   "title": "Email kept on the commits, my own time, and the export commit",
+   "when": "22 Nov 2026, 14:11",
+   "kind": "spoken",
+   "prompt": [
+    "I checked this round. The labels are right, the scan is clean on my side too, I looked through the screenshots, and the jq command works. Keep my email on the commits, as it is. For my own time, replace \"(I'll fill this in)\" with: \"about 8 hours: about 1 hour on 18 and 19 Nov reading the brief, and about 7 hours on 21 and 22 Nov reading the agent's answers, checking them and writing my prompts.\" With that change, the commit is approved with these 62 files and this message. Don't push yet. I'll run the README steps myself first."
+   ],
+   "answer": [
+    "The commits keep your email, as you decided.",
+    "The README's last line now gives your own time: about 8 hours (about 1 hour on 18 and 19 Nov reading the brief, about 7 hours on 21 and 22 Nov reading the answers, checking them and writing the prompts).",
+    "Committed the export as `a8d1ee7`: the 62 files and the message you approved. Not pushed; the folder has no GitHub remote yet.",
+    "Time: about 2 minutes of agent time (from 14:11 UTC)."
+   ],
+   "mistakes": [],
+   "noneNote": ""
+  },
+  {
+   "n": 19,
+   "title": "Log commit, push over SSH, and the README on a fresh clone from GitHub",
+   "when": "22 Nov 2026, 14:55",
+   "kind": "spoken",
+   "prompt": [
+    "Okay, I ran the readme step myself from the local clone and everything worked. So log this prompt, then commit only agent underscore log dot md and the log dash data dot js in the docs and asset folder with messages log prompts 18 and 19. That commit is approved. Leave the readme as it is. Then add the remote over SSH. Actually, check the following link, uh, not https because my active gh account is different one. Push main. After the push, clone the repo from GitHub into a temporary folder. Follow the readme how to run for word by word and tell me what happened. git@github.com:junaidatique/pc2dbt.git"
+   ],
+   "answer": [
+    "Logged this prompt and committed only `agent_log.md` and `docs/assets/log-data.js`, as you approved. The README is unchanged.",
+    "This entry was written before the push, because it is part of the commit that is pushed. After it: add the remote over SSH (`git@github.com:junaidatique/pc2dbt.git`), push `main`, clone the repo from GitHub into a temporary folder and follow the README's How to run word for word. Those results are in the reply and are added here afterwards."
+   ],
+   "mistakes": [],
+   "noneNote": ""
   }
  ],
  "statusNote": "Status: **open** means not decided or not done, **decided** means we agreed what to do, **handled** means it is done and checked.",
@@ -768,8 +800,8 @@ window.AGENT_LOG = {
     },
     {
      "watch": "All commits carry my email as author and committer.",
-     "why": "Pushing makes it public. Cleaning the export doesn't change commit metadata (prompt 17).",
-     "status": "open"
+     "why": "Pushing makes it public. Cleaning the export doesn't change commit metadata (prompt 17). You chose to keep it (prompt 18).",
+     "status": "decided"
     },
     {
      "watch": "The demo XML holds the credential.",
