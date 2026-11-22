@@ -70,6 +70,22 @@
     Site.linkLines(h2);
     root.appendChild(h2);
 
+    if (sec.facts && sec.facts.length) {
+      root.appendChild(h("h3", null, "Seed facts (no jaffle-shop model to compare with)"));
+      root.appendChild(h("p", "small muted", "Each fact is answered from our tables and, separately, by a query on the raw seed tables. They must agree."));
+      var fw = h("div", "table-wrap"), ft = h("table", "data");
+      ft.innerHTML = "<thead><tr><th>Fact</th><th>Ours</th><th>Seed</th><th>Result</th></tr></thead>";
+      var fb = h("tbody");
+      sec.facts.forEach(function (f) {
+        var tr = h("tr");
+        var td = h("td"); td.appendChild(Site.textWithLines(f.fact)); tr.appendChild(td);
+        tr.appendChild(h("td", "num", f.ours)); tr.appendChild(h("td", "num", f.seed));
+        tr.appendChild(h("td", "status " + (f.status === "match" ? "matched" : "unexplained"), f.status));
+        fb.appendChild(tr);
+      });
+      ft.appendChild(fb); fw.appendChild(ft); root.appendChild(fw);
+      root.appendChild(h("h3", null, "Columns with a jaffle-shop twin"));
+    }
     var wrap0 = h("div", "table-wrap"), sumt = h("table", "data");
     sumt.innerHTML = "<thead><tr><th>Table</th><th>Rows (ours / jaffle-shop)</th><th>Match</th><th>Explained</th><th>Unexplained</th><th>Not compared</th></tr></thead>";
     var sum = h("tbody");
@@ -77,21 +93,24 @@
       var c = counts(t), rows = t.comparison ? t.comparison.rows : null;
       var tr = h("tr");
       var td = h("td"); var link = h("a", null, t.name); link.href = "#" + t.name; td.appendChild(link); tr.appendChild(td);
-      tr.appendChild(h("td", null, rows ? rowsText(rows) : "not compared"));
+      tr.appendChild(h("td", null, rows ? rowsText(rows) : "no twin: seed facts only"));
       ["matched", "explained", "unexplained", "not compared"].forEach(function (k) { tr.appendChild(h("td", "num", String(c[k]))); });
       sum.appendChild(tr);
     });
     sumt.appendChild(sum); wrap0.appendChild(sumt); root.appendChild(wrap0);
 
     sec.tables.forEach(function (t) {
-      var c = counts(t), rows = t.comparison.rows;
+      var c = counts(t), cmp = t.comparison, rows = cmp ? cmp.rows : null;
       var d = h("details", "tbl"); d.id = t.name;
       var s = h("summary", null, t.name + " ");
-      s.appendChild(h("span", "muted", "· " + fmt(rows.ours) + " rows · " + c.matched + " match · " + c.explained + " explained · " + c.unexplained + " unexplained"));
+      s.appendChild(h("span", "muted", rows ? "· " + fmt(rows.ours) + " rows · " + c.matched + " match · " + c.explained + " explained · " + c.unexplained + " unexplained"
+                                               : "· no jaffle-shop twin: checked by the seed facts"));
       d.appendChild(s);
       var inner = h("div", "inner");
-
-      inner.appendChild(h("h3", null, "Compared with jaffle-shop"));
+      if (!cmp) {
+        inner.appendChild(h("p", "muted", "No jaffle-shop model repeats this table, so the seed facts above check it."));
+      } else {
+      inner.appendChild(h("h3", null, "Compared with " + (cmp.reference_table && cmp.reference_table !== t.name ? "jaffle-shop's " + cmp.reference_table : "jaffle-shop")));
       if (rows.status !== "matched") {
         var rp = h("p");
         rp.appendChild(document.createTextNode("Rows: " + fmt(rows.only_reference) + " only in jaffle-shop, " + fmt(rows.only_ours) + " only in ours. "));
@@ -112,6 +131,7 @@
         body.appendChild(tr);
       });
       tb.appendChild(body); wrap.appendChild(tb); inner.appendChild(wrap);
+      }
 
       inner.appendChild(h("h3", null, "Each box next to the SQL it became"));
       t.blocks.forEach(function (b) {

@@ -122,6 +122,8 @@ def compare(ours_db: Path, ref_db: Path, expected: dict) -> dict:
     con.execute(f"attach '{ref_db}' as ref (read_only)")
     tables = []
     for table, spec in expected.items():
+        rtable = spec.get("reference_table", table)       # the jaffle-shop twin, when its name differs
+        other = spec.get("other_columns")                 # one reason for every column with no twin on either side
         rename = spec.get("rename", {})
         as_int = set(spec.get("boolean_as_int", []))
         explained = spec.get("explained", {})
@@ -130,13 +132,13 @@ def compare(ours_db: Path, ref_db: Path, expected: dict) -> dict:
         types_o = dict(con.execute(f"select column_name, data_type from information_schema.columns where table_catalog = 'ours' "
                                    f"and table_schema = 'main' and table_name = '{table}' order by ordinal_position").fetchall())
         types_r = dict(con.execute(f"select column_name, data_type from information_schema.columns where table_catalog = 'ref' "
-                                   f"and table_schema = 'main' and table_name = '{table}' order by ordinal_position").fetchall())
+                                   f"and table_schema = 'main' and table_name = '{rtable}' order by ordinal_position").fetchall())
         key = spec["key"]
         on = " and ".join(f"o.{k} = r.{rename.get(k, k)}" for k in key)
         n_o = con.execute(f"select count(*) from ours.main.{table}").fetchone()[0]
-        n_r = con.execute(f"select count(*) from ref.main.{table}").fetchone()[0]
-        only_o = con.execute(f"select count(*) from ours.main.{table} o anti join ref.main.{table} r on {on}").fetchone()[0]
-        only_r = con.execute(f"select count(*) from ref.main.{table} r anti join ours.main.{table} o on {on}").fetchone()[0]
+        n_r = con.execute(f"select count(*) from ref.main.{rtable}").fetchone()[0]
+        only_o = con.execute(f"select count(*) from ours.main.{table} o anti join ref.main.{rtable} r on {on}").fetchone()[0]
+        only_r = con.execute(f"select count(*) from ref.main.{rtable} r anti join ours.main.{table} o on {on}").fetchone()[0]
         rows = {"ours": n_o, "reference": n_r, "only_ours": only_o, "only_reference": only_r, "reason": ""}
         want = spec.get("rows")  # rows expected on one side only, with the reason
         if want is None:
@@ -149,9 +151,9 @@ def compare(ours_db: Path, ref_db: Path, expected: dict) -> dict:
         columns = []
         mapped_ref = set()
         for col, dtype in types_o.items():
-            if col in skip_ours:
+            if col in skip_ours or (other and rename.get(col, col) not in types_r):
                 columns.append({"ours": col, "reference": None, "status": "not compared", "differing_rows": None,
-                                "reason": skip_ours[col]})
+                                "reason": skip_ours.get(col, other)})
                 continue
             rcol = rename.get(col, col)
             if rcol not in types_r:
@@ -161,7 +163,7 @@ def compare(ours_db: Path, ref_db: Path, expected: dict) -> dict:
             mapped_ref.add(rcol)
             a = normalised("o", col, dtype, col in as_int)
             b = normalised("r", rcol, types_r[rcol], col in as_int)
-            diff = con.execute(f"select count(*) from ours.main.{table} o join ref.main.{table} r on {on} "
+            diff = con.execute(f"select count(*) from ours.main.{table} o join ref.main.{rtable} r on {on} "
                                f"where {a} is distinct from {b}").fetchone()[0]
             if diff == 0:
                 status, reason = ("stale", f"listed as explained but matches: {explained[col]}") if col in explained else ("matched", "")
@@ -171,9 +173,9 @@ def compare(ours_db: Path, ref_db: Path, expected: dict) -> dict:
         for rcol in types_r:
             if rcol not in mapped_ref:
                 columns.append({"ours": None, "reference": rcol,
-                                "status": "not compared" if rcol in skip_ref else "unexplained",
-                                "differing_rows": None, "reason": skip_ref.get(rcol, "no matching column in our output")})
-        tables.append({"table": table, "key": key, "rows": rows, "columns": columns})
+                                "status": "not compared" if (rcol in skip_ref or other) else "unexplained",
+                                "differing_rows": None, "reason": skip_ref.get(rcol, other or "no matching column in our output")})
+        tables.append({"table": table, "reference_table": rtable, "key": key, "rows": rows, "columns": columns})
     summary = {}
     for t in tables:
         for c in t["columns"]:

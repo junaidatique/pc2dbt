@@ -13,10 +13,11 @@ import pytest
 
 from pc2dbt.convert import convert_mapping
 from pc2dbt.parse import parse_file
-from tests.helpers import DEMO_XML, MINI_MARTS_XML, MINI_XML, render
+from tests.helpers import DEMO_XML, MINI_ENRICHED_XML, MINI_MARTS_XML, MINI_XML, render
 
 CASES = [(MINI_XML, "m_MINI"), (MINI_MARTS_XML, "m_MINI_STG"), (MINI_MARTS_XML, "m_MINI_MARTS"),
-         (DEMO_XML, "m_FL_JS_STAGING_FULL"), (DEMO_XML, "m_FL_JS_MARTS_CORE")]
+         (MINI_ENRICHED_XML, "m_MINI_ENRICHED"), (DEMO_XML, "m_FL_JS_STAGING_FULL"), (DEMO_XML, "m_FL_JS_MARTS_CORE"),
+         (DEMO_XML, "m_FL_JS_MARTS_ENRICHED")]
 
 
 def column_refs(sql: str) -> list[list[str]]:

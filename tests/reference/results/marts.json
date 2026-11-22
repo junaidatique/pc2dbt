@@ -8,6 +8,7 @@
   "tables": [
     {
       "table": "customers",
+      "reference_table": "customers",
       "key": [
         "customer_id"
       ],
@@ -87,6 +88,7 @@
     },
     {
       "table": "orders",
+      "reference_table": "orders",
       "key": [
         "order_id"
       ],
@@ -229,6 +231,7 @@
     },
     {
       "table": "order_items",
+      "reference_table": "order_items",
       "key": [
         "order_item_id"
       ],
@@ -322,6 +325,7 @@
     },
     {
       "table": "products",
+      "reference_table": "products",
       "key": [
         "product_id"
       ],
@@ -394,6 +398,7 @@
     },
     {
       "table": "supplies",
+      "reference_table": "supplies",
       "key": [
         "supply_id",
         "product_id"

@@ -111,3 +111,43 @@ marts:
         supply_cost_cents: "jaffle-shop has no cents column."
       reference:
         supply_uuid: "jaffle-shop's surrogate key; the XML has none."
+
+# Enriched marts: no jaffle-shop model of their own. Only columns that repeat a jaffle-shop mart column are
+# compared (check 3); everything else is checked by the seed facts in tests/test_reference_enriched.py.
+enriched:
+  order_financials:
+    reference_table: orders
+    key: [order_id]
+    rows:
+      only_reference: 483
+      reason: "The 483 orders with no items: JNR_ORDERS_ITEMS_AGG (L1591) is a Master Outer Join that keeps the per-order item totals and drops orders with no match (decision D1)."
+    rename: {ordered_at_day: ordered_at, order_subtotal: subtotal, order_tax_paid: tax_paid, item_lines: count_order_items,
+             item_revenue: order_items_subtotal, order_cogs: order_cost, food_item_lines: count_food_items,
+             drink_item_lines: count_drink_items}
+    explained:
+      order_subtotal: "100 times jaffle-shop's: ORDER_SUBTOTAL = SUBTOTAL (L1606), which holds cents because of the staging swap at L611 (decision D1)."
+      order_tax_paid: "100 times jaffle-shop's: ORDER_TAX_PAID = TAX_PAID (L1607), which holds cents because of the staging swap at L612 (decision D1)."
+      order_total: "100 times jaffle-shop's: ORDER_TOTAL comes from stg_orders.order_total, which holds cents because of the staging swap at L613 (decision D1)."
+      item_revenue: "100 times jaffle-shop's: it sums PRODUCT_PRICE (L1555), which holds cents because of the staging swap at L621 (decision D1)."
+      customer_order_number: "Never restarts per customer: the counter (L1705-1706) numbers all 61,465 rows by customer, day and order (decision Q13); it equals jaffle-shop's per-customer number only on the 190 rows of the first customer in that order."
+    other_columns: "No twin column in jaffle-shop's orders."
+
+  order_item_enriched:
+    reference_table: order_items
+    key: [order_item_id]
+    rename: {ordered_at_day: ordered_at, item_cogs: supply_cost}
+    explained:
+      product_price: "100 times jaffle-shop's: it comes from stg_products.product_price, which holds cents because of the swap at L621 (decision D1)."
+    other_columns: "No twin column in jaffle-shop's order_items."
+
+  customer_360:
+    reference_table: customers
+    key: [customer_id]
+    explained:
+      count_lifetime_orders: "Counts only orders with items: JNR_ORDERS_ITEMS_AGG (L1591) drops the 483 orders with no items, which belong to 85 customers; each count is lower by that customer's number of such orders."
+      first_ordered_at: "For 5 customers jaffle-shop's first day is a day whose only order had no items, which never reaches this table (L1591)."
+      last_ordered_at: "For 5 customers jaffle-shop's last day is a day whose only order had no items, which never reaches this table (L1591)."
+      lifetime_spend_pretax: "Holds LIFETIME_SPEND, the sum of order totals in cents (crossed at L2480; cents from the staging swap at L613)."
+      lifetime_tax_paid: "Holds LIFETIME_SPEND_PRETAX, the sum of subtotals in cents (crossed at L2481; cents from the staging swap at L611)."
+      lifetime_spend: "Holds LIFETIME_TAX_PAID, the sum of tax in cents (crossed at L2482; cents from the staging swap at L612)."
+    other_columns: "No twin column in jaffle-shop's customers."

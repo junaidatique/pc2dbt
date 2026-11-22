@@ -1,0 +1,128 @@
+[
+  {
+    "fact": "Last order day in the seed",
+    "ours": "2025-08-31 00:00:00",
+    "seed": "2025-08-31 00:00:00",
+    "status": "match"
+  },
+  {
+    "fact": "Smallest recency in days (run_date 2025-12-31)",
+    "ours": "122",
+    "seed": "122",
+    "status": "match"
+  },
+  {
+    "fact": "Customers with recency score 1 (L2341: more than 90 days)",
+    "ours": "935",
+    "seed": "935",
+    "status": "match"
+  },
+  {
+    "fact": "Lowest lifetime spend in cents (lands in LIFETIME_SPEND_PRETAX, L2480)",
+    "ours": "624.00",
+    "seed": "624.00",
+    "status": "match"
+  },
+  {
+    "fact": "Customers with spend score 3 (L2343: 200 or more, here in cents)",
+    "ours": "935",
+    "seed": "935",
+    "status": "match"
+  },
+  {
+    "fact": "CHAMPION or LOYAL customers",
+    "ours": "0",
+    "seed": "0",
+    "status": "match"
+  },
+  {
+    "fact": "AT_RISK customers (2 or more orders)",
+    "ours": "929",
+    "seed": "929",
+    "status": "match"
+  },
+  {
+    "fact": "STANDARD customers (1 order)",
+    "ours": "6",
+    "seed": "6",
+    "status": "match"
+  },
+  {
+    "fact": "Customers in CUSTOMER_360",
+    "ours": "935",
+    "seed": "935",
+    "status": "match"
+  },
+  {
+    "fact": "Orders in ORDER_FINANCIALS",
+    "ours": "61465",
+    "seed": "61465",
+    "status": "match"
+  },
+  {
+    "fact": "Orders in the HIGH band (ORDER_TOTAL >= 50 compares cents, L1740)",
+    "ours": "61465",
+    "seed": "61465",
+    "status": "match"
+  },
+  {
+    "fact": "Store-days where UNIQUE_CUSTOMERS is not 0 (L2004, L2127)",
+    "ours": "0",
+    "seed": "0",
+    "status": "match"
+  },
+  {
+    "fact": "Store-days where HIGH_VALUE_ORDERS differs from ORDERS_COUNT",
+    "ours": "0",
+    "seed": "0",
+    "status": "match"
+  },
+  {
+    "fact": "Store-days in STORE_DAILY_KPIS",
+    "ours": "538",
+    "seed": "538",
+    "status": "match"
+  },
+  {
+    "fact": "Stores in STORE_DAILY_KPIS",
+    "ours": "2",
+    "seed": "2",
+    "status": "match"
+  },
+  {
+    "fact": "Rows in ORDER_ITEM_ENRICHED",
+    "ours": "90900",
+    "seed": "90900",
+    "status": "match"
+  },
+  {
+    "fact": "Product-days in PRODUCT_DAILY_PERFORMANCE",
+    "ours": "3635",
+    "seed": "3635",
+    "status": "match"
+  },
+  {
+    "fact": "Lowest item margin (price in cents, cost in dollars, L1513)",
+    "ours": "0.9965",
+    "seed": "0.9965",
+    "status": "match"
+  },
+  {
+    "fact": "Highest item margin (price in cents, cost in dollars, L1513)",
+    "ours": "0.9989",
+    "seed": "0.9989",
+    "status": "match"
+  },
+  {
+    "fact": "Supplies marked perishable (the L504 rule never matches the seed's True/False)",
+    "ours": "0",
+    "seed": "0",
+    "status": "match"
+  },
+  {
+    "fact": "Product-days with MARGIN_PCT 0 and PERISHABLE_SALES_FLAG 1 (crossed at L2542-2543)",
+    "ours": "3635",
+    "seed": "3635",
+    "status": "match"
+  }
+]

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from .expr import Symbol, UnsupportedFunction, translate, uses_aggregate
 from .parse import Connector, Folder, Mapping, Transformation
@@ -16,7 +17,8 @@ from .types import duck_type, scale_of
 
 @dataclass
 class Flag:
-    kind: str       # crossed, rounds, error_default, router_default, century, master_outer, sort_order, counter
+    kind: str       # crossed, rounds, error_default, router_default, century, master_outer, sort_order, counter,
+                    # self_compare, parameter
     line: int
     message: str
 
@@ -63,13 +65,46 @@ def cte_name(instance: str) -> str:
     return instance.lower()
 
 
+def division(t: Transformation, p, seen: tuple = ()):
+    """The port whose expression divides, if p's value comes from a division: in p itself or in a
+    variable port it reads (pasted in, decision of prompt 12). None otherwise."""
+    if "/" in p.expression:
+        return p
+    for v in t.ports.values():
+        if v.port_type == "LOCAL VARIABLE" and v.name not in seen and mentions(v.name, p.expression):
+            found = division(t, v, seen + (p.name,))
+            if found is not None:
+                return found
+    return None
+
+
 def written_tables(folder: Folder) -> set[str]:
     """Tables some mapping in this XML writes. A PC Source reading one becomes ref() (decision Q5)."""
     return {i.definition for m in folder.mappings.values() for i in m.instances.values() if i.type == "TARGET"}
 
 
-def has_variables(t: Transformation | None) -> bool:
-    return t is not None and any(p.port_type == "LOCAL VARIABLE" for p in t.ports.values())
+def mentions(name: str, text: str) -> bool:
+    return re.search(rf"(?<![\w$]){re.escape(name)}(?!\w)", text, re.I) is not None
+
+
+def stateful_variables(variables) -> list:
+    """Variable ports that read a previous row's value. PowerCenter evaluates input ports, then variable
+    ports top to bottom, then output ports, so a variable that reads itself or a variable below it gets
+    that variable's value from the previous row. Everything else uses this row only."""
+    return [v for i, v in enumerate(variables) if any(mentions(w.name, v.expression) for w in variables[i:])]
+
+
+def has_stateful(t: Transformation | None) -> bool:
+    return t is not None and bool(stateful_variables([p for p in t.ports.values() if p.port_type == "LOCAL VARIABLE"]))
+
+
+def var_value(v) -> tuple[str, str]:
+    """(dbt var name, default) for a $$ mapping parameter; dates in the XML look like 12/31/2025 00:00:00."""
+    default = v.default.strip()
+    if v.datatype == "date/time" and default:
+        d = datetime.strptime(default, "%m/%d/%Y %H:%M:%S")
+        default = d.strftime("%Y-%m-%d") if d.time() == datetime.min.time() else d.strftime("%Y-%m-%d %H:%M:%S")
+    return v.name.lstrip("$").lower(), default
 
 
 class MappingGraph:
@@ -81,12 +116,18 @@ class MappingGraph:
             self.into[(c.to_instance, c.to_field)] = c
             self.incoming.setdefault(c.to_instance, []).append(c)
         self.written = written_tables(folder)
+        self.param_file_line = 0  # the session's parameter file, which can override $$ parameters
+        for session in folder.root.iter("SESSION"):
+            if session.get("MAPPINGNAME") == mapping.name:
+                for a in session.iter("ATTRIBUTE"):
+                    if a.get("NAME") == "Parameter Filename" and (a.get("VALUE") or "").strip():
+                        self.param_file_line = a.line
         # A Sorter whose rows go straight into an Expression with variable ports is kept: that
         # Expression reads rows one by one, so their order matters (decisions Q12, Q13).
         self.kept_sorters: dict[str, str] = {}
         for c in mapping.connectors:
             src, dst = self.transformation(c.from_instance), self.transformation(c.to_instance)
-            if src is not None and src.type == "Sorter" and dst is not None and dst.type == "Expression" and has_variables(dst):
+            if src is not None and src.type == "Sorter" and dst is not None and dst.type == "Expression" and has_stateful(dst):
                 self.kept_sorters[c.from_instance] = c.to_instance
 
     def transformation(self, instance: str) -> Transformation | None:
@@ -118,21 +159,26 @@ class MappingGraph:
             return f"{cte_name(instance)}__{t.ports[port].group.lower()}", port.lower()
         return cte_name(instance), port.lower()
 
-    def origin(self, instance: str, port: str):
-        """The port where a value was last computed, following pass-through ports back along connectors."""
+    def origins(self, instance: str, port: str) -> list:
+        """The (box, port) pairs where a value was last computed, following pass-through ports back along
+        connectors, through Router groups and through every branch of a Union."""
         t = self.transformation(instance)
         p = t.ports.get(port) if t else None
         if p is None:
-            return None
+            return []
         if t.type == "Router" and p.ref_field:
-            c = self.into.get((instance, p.ref_field))
+            back = [self.into.get((instance, p.ref_field))]
+        elif t.type == "Custom Transformation" and t.template == "Union Transformation" and not p.is_input:
+            back = [self.into.get((instance, i)) for i, o in t.dependencies if o == port]
         elif p.is_input and p.is_output and p.expression.strip().upper() in ("", port.upper()):
-            c = self.into.get((instance, port))
+            back = [self.into.get((instance, port))]
         else:
-            return p
-        if c is None or self.transformation(c.from_instance) is None:
-            return p
-        return self.origin(c.from_instance, c.from_field) or p
+            return [(t, p)]
+        found = []
+        for c in back:
+            if c is not None and self.transformation(c.from_instance) is not None:
+                found += self.origins(c.from_instance, c.from_field)
+        return found or [(t, p)]
 
     def input_ref(self, instance: str, port: str):
         c = self.into.get((instance, port))
@@ -179,6 +225,26 @@ class ModelBuilder:
         self.flags: list[Flag] = []
         self.blocks: list[Block] = []
         self.ctes: list[str] = []
+        self.params_flagged: set[str] = set()
+
+    def translate(self, text: str, symbols: dict, **kw) -> str:
+        """translate(), plus $$ mapping parameters as dbt vars (decision Q15)."""
+        params = {}
+        for name in {n.upper() for n in re.findall(r"\$\$\w+", text)}:
+            v = self.g.m.variables.get(name)
+            if v is None or not v.is_param or v.datatype not in ("date/time", "string"):
+                raise UnsupportedElement(f"mapping variable {name}", v.line if v else self.g.m.line)
+            var, default = var_value(v)
+            jinja = f"'{{{{ var('{var}', '{default}') }}}}'"
+            params[name] = Symbol(f"/* {v.name} L{v.line} */ " + (f"cast({jinja} as timestamp)" if v.datatype == "date/time" else jinja),
+                                  v.datatype)
+            if name not in self.params_flagged:
+                self.params_flagged.add(name)
+                where = (f"; the session's parameter file (L{self.g.param_file_line}) can override it in PowerCenter, "
+                         f"so pass the same value with dbt --vars") if self.g.param_file_line else ""
+                self.flag("parameter", v.line, f"{v.name} becomes the dbt var {var}, default {default} from the XML "
+                                               f"(decision Q15){where}")
+        return translate(text, {**symbols, **params}, **kw)
 
     def flag(self, kind: str, line: int, message: str) -> str:
         self.flags.append(Flag(kind, line, message))
@@ -236,30 +302,58 @@ class ModelBuilder:
             elif default and default.upper() != "NULL":
                 raise UnsupportedElement(f"{instance}.{p.name}: input port default value {default!r}", p.line)
         source = one_source(refs, instance, t.line)
+        # Variable ports, top to bottom (prompt 12). One that uses this row only is pasted into the ports
+        # that read it, marked /* name line */; one that reads a previous row must be the counter.
         variables = [p for p in t.ports.values() if p.port_type == "LOCAL VARIABLE"]
-        counter_note, counter_var = "", None
-        if variables:
-            counter_var, counter_note = self.counter(instance, t, variables, symbols)
+        stateful = stateful_variables(variables)
+        var_notes: dict[str, list[str]] = {}
+        for v in variables:
+            if v in stateful:
+                sql, note = self.counter(instance, t, v, variables, symbols)
+                symbols[v.name] = Symbol(sql, v.datatype)
+                var_notes[v.name] = [note]
+                continue
+            notes = self.notes_from(v.expression, variables, var_notes)
+            sql = self.port_sql(instance, v, symbols, notes)
+            var_notes[v.name] = notes
+            symbols[v.name] = Symbol(f"/* {v.name} L{v.line} */ ({sql})", v.datatype)
         cols = []
         for p in self.needed_ports(t, instance):
             if p.is_input:
                 cols.append(column(symbols[p.name].sql, p.name.lower()))
                 continue
-            try:
-                sql = translate(p.expression, symbols) if p.expression.strip() else "null"
-            except UnsupportedFunction as e:
-                raise UnsupportedElement(f"{instance}.{p.name}: {e.name}", p.line) from None
-            comment = ""
-            if counter_var and re.search(rf"\b{counter_var}\b", p.expression, re.I):
-                comment = counter_note
+            notes = self.notes_from(p.expression, variables, var_notes)
+            sql = self.port_sql(instance, p, symbols, notes) if p.expression.strip() else "null"
             if re.search(r"TO_DATE\s*\(", p.expression, re.I) and TWO_DIGIT_YEAR.search(p.expression):
-                comment = self.flag("century", p.line,
-                                    "two-digit year: DuckDB reads 00-68 as 20xx and 69-99 as 19xx; PowerCenter's rule may differ")
-            cols.append(column(sql, p.name.lower(), comment))
+                notes.append(self.flag("century", p.line,
+                                       "two-digit year: DuckDB reads 00-68 as 20xx and 69-99 as 19xx; PowerCenter's rule may differ"))
+            cols.append(column(sql, p.name.lower(), "; ".join(notes)))
         body = f"    select\n{select_list(cols)}\n    from {source}"
         if where:
             body += "\n    where " + "\n      and ".join(f"{w}  -- {c}" for w, c in where)
         self.add(instance, t, "Expression", [(cte_name(instance), body)])
+
+    @staticmethod
+    def notes_from(text: str, variables, var_notes: dict) -> list[str]:
+        """Flags of the variables an expression reads, so each output carries them as a comment."""
+        out = []
+        for v in variables:
+            if mentions(v.name, text):
+                out += [n for n in var_notes.get(v.name, []) if n not in out]
+        return out
+
+    def port_sql(self, instance: str, p, symbols: dict, notes: list[str]) -> str:
+        same: list[str] = []
+        try:
+            sql = self.translate(p.expression, symbols, self_compares=same)
+        except UnsupportedFunction as e:
+            raise UnsupportedElement(f"{instance}.{p.name}: {e.name}", p.line) from None
+        if same:
+            notes.append(self.flag("self_compare", p.line,
+                                   f"{p.name} compares {', '.join(dict.fromkeys(same))} with itself: the variables it reads "
+                                   f"already hold this row's values (they come earlier in port order), so each comparison "
+                                   f"is true unless the value is NULL"))
+        return sql
 
     def sorter(self, instance: str, t: Transformation):
         if t.attr("Distinct") == "YES":
@@ -270,30 +364,31 @@ class ModelBuilder:
         self.blocks.append(Block(instance, "Sorter", t.line, t.end, "", note))
         self.ctes.append(f"-- {instance} · Sorter · {lines(t.line, t.end)} · {note}")
 
-    def counter(self, instance: str, t: Transformation, variables, symbols: dict) -> tuple[str, str]:
-        """The one row-by-row pattern in the XML (decision Q13): v_PREV = X, then
-        v_SEQ = IIF(v_PREV = X, v_SEQ + 1, 1), evaluated in port order. Anything else stops."""
-        prev, seq = (variables + [None, None])[:2]
-        by_name = {k.upper(): v for k, v in symbols.items()}
-        x = prev.expression.strip()
-        pattern = f"IIF({prev.name}={x},{seq.name}+1,1)" if seq else ""
-        if len(variables) != 2 or x.upper() not in by_name or re.sub(r"\s+", "", seq.expression).upper() != pattern.upper():
-            raise UnsupportedElement(f"{instance}.{variables[-1].name}: variable ports in a pattern this converter does not "
-                                     f"translate (decision Q13)", variables[-1].line)
+    def counter(self, instance: str, t: Transformation, seq, variables, symbols: dict) -> tuple[str, str]:
+        """The one pattern that reads a previous row (decision Q13): v_SEQ = IIF(v_PREV = X, v_SEQ + 1, 1)
+        where v_PREV, above it, is X. Anything else that reads a previous row stops."""
+        above = {v.name.upper(): v for v in variables[:variables.index(seq)]}
+        m = re.fullmatch(rf"IIF\((\w+)=(\w+),{re.escape(seq.name)}\+1,1\)", re.sub(r"\s+", "", seq.expression), re.I)
+        prev = x = None
+        for a, b in ((m.group(1), m.group(2)), (m.group(2), m.group(1))) if m else ():
+            v, port = above.get(a.upper()), t.ports.get(b) or t.ports.get(b.upper())
+            if v is not None and port is not None and port.is_input and v.expression.strip().upper() == port.name.upper():
+                prev, x = v, port.name
+        if prev is None:
+            raise UnsupportedElement(f"{instance}.{seq.name}: reads a previous row's value in a pattern this converter "
+                                     f"does not translate (decision Q13)", seq.line)
         feeders = {c.from_instance for c in self.g.incoming.get(instance, [])}
         srt = feeders.pop() if len(feeders) == 1 else None
         if srt not in self.g.kept_sorters:
             raise UnsupportedElement(f"{instance}: variable ports need a Sorter right before them, "
                                      f"otherwise the row order is unknown", t.line)
-        pos, xs = f"{cte_name(srt)}.sort_position", by_name[x.upper()].sql
-        symbols[prev.name] = Symbol(xs, prev.datatype)  # it holds this row's X by the time it is read
-        symbols[seq.name] = Symbol(f"{pos}\n            - coalesce(max(case when {xs} is null then {pos} end) over (order by {pos}) - 1, 0)",
-                                   seq.datatype)
+        pos, xs = f"{cte_name(srt)}.sort_position", symbols[x].sql
+        sql = f"{pos}\n            - coalesce(max(case when {xs} is null then {pos} end) over (order by {pos}) - 1, 0)"
         note = self.flag("counter", seq.line,
                          f"{prev.name} is set to this row's {x} ({lines(prev.line, prev.line)}) before {seq.name} compares them, "
                          f"so the comparison is true on every row where {x} is not NULL: one running number over all rows "
                          f"in {srt}'s order that never restarts per {x}, back to 1 on a row whose {x} is NULL")
-        return seq.name, note
+        return sql, note
 
     def sorted_rows(self, instance: str, t: Transformation):
         """A Sorter kept because an Expression with variable ports reads its rows in order."""
@@ -348,13 +443,29 @@ class ModelBuilder:
                 raise UnsupportedElement(f"{instance}.{p.name}: Aggregator port without an aggregate function "
                                          f"(PowerCenter would return the last row's value)", p.line)
             try:
-                cols.append(column(translate(p.expression, symbols, aggregates=True), p.name.lower()))
+                cols.append(column(self.translate(p.expression, symbols, aggregates=True), p.name.lower()))
             except UnsupportedFunction as e:
                 raise UnsupportedElement(f"{instance}.{p.name}: {e.name}", p.line) from None
         body = f"    select\n{select_list(cols)}\n    from {source}"
         if group:
             body += "\n    group by " + ", ".join(symbols[p.name].sql for p in group)
         self.add(instance, t, "Aggregator", [(cte_name(instance), body)])
+
+    def filter(self, instance: str, t: Transformation):
+        symbols, refs = {}, []
+        for p in t.ports.values():
+            if p.is_input:
+                r = self.g.input_ref(instance, p.name)
+                refs.append(r)
+                symbols[p.name] = Symbol(qualified(r), p.datatype)
+        source = one_source(refs, instance, t.line)
+        text = t.attr("Filter Condition").strip() or "TRUE"
+        line = t.attributes.get("Filter Condition", ("", t.line))[1]
+        cond = self.translate(text, symbols)
+        cols = [column(symbols[p.name].sql, p.name.lower()) for p in self.needed_ports(t, instance)]
+        body = (f"    select\n{select_list(cols)}\n    from {source}\n    where coalesce({cond}, false)"
+                f"  -- {' '.join(text.split())} (L{line}); a row whose condition is NULL is dropped, as in PowerCenter")
+        self.add(instance, t, "Filter", [(cte_name(instance), body)])
 
     def joiner(self, instance: str, t: Transformation):
         jt = t.attr("Join Type")
@@ -374,7 +485,7 @@ class ModelBuilder:
             symbols[p.name] = Symbol("null" if r is None else f"{side}.{r[1]}", p.datatype)
         master = one_source(sides["master"], f"{instance} (master side)", t.line)
         detail = one_source(sides["detail"], f"{instance} (detail side)", t.line)
-        cond = translate(t.attr("Join Condition"), symbols)
+        cond = self.translate(t.attr("Join Condition"), symbols)
         cols = [column(symbols[p.name].sql, p.name.lower()) for p in self.needed_ports(t, instance)]
         flag = ""
         if jt == "Master Outer Join":
@@ -392,7 +503,7 @@ class ModelBuilder:
         source = one_source(refs.values(), instance, t.line)
         symbols = {n: Symbol(qualified(r), inputs[n].datatype) for n, r in refs.items()}
         wanted = set(self.needed.get(instance, []))
-        conditions = [(g, translate(g.expression.strip(), symbols)) for g in sorted(t.groups, key=lambda g: g.order)
+        conditions = [(g, self.translate(g.expression.strip(), symbols)) for g in sorted(t.groups, key=lambda g: g.order)
                       if g.group_type == "OUTPUT"]
         ctes = []
         for g in sorted(t.groups, key=lambda g: g.order):
@@ -449,15 +560,20 @@ class ModelBuilder:
             if c.from_field != f.name and c.from_field in names:
                 notes.append(self.flag("crossed", c.line,
                                        f"{c.from_instance}.{c.from_field} goes into {table.name}.{f.name}, as the connector says"))
-            src_port = self.g.origin(c.from_instance, c.from_field)
-            if src_port is not None and scale_of(f.datatype, f.scale) not in (-1, None):
+            found = self.g.origins(c.from_instance, c.from_field)
+            if found and scale_of(f.datatype, f.scale) not in (-1, None):
                 # With high precision off a computed decimal is a double at run time, so a division
-                # can carry more decimals than the port declares (decision Q11).
-                computed = "/" in src_port.expression
-                incoming = None if computed else scale_of(src_port.datatype, src_port.scale)
+                # can carry more decimals than the port declares (decision Q11). A Union has one
+                # origin per branch; any branch that rounds is flagged.
+                divided = [(p, division(t, p)) for t, p in found if division(t, p) is not None]
+                scales = [scale_of(p.datatype, p.scale) for _, p in found]
+                incoming = None if divided or None in scales else max(scales)
                 target_scale = scale_of(f.datatype, f.scale)
+                src_port, div = divided[0] if divided else (found[0][1], None)
+                computed = div is not None
                 if incoming is None or (incoming not in (-1,) and incoming > target_scale):
-                    what = (f"{c.from_field} is computed as {src_port.expression} ({lines(src_port.line, src_port.line)}), "
+                    inner = "" if div in (None, src_port) else f", which divides in {div.name} ({lines(div.line, div.line)})"
+                    what = (f"{c.from_field} is computed as {src_port.expression} ({lines(src_port.line, src_port.line)}){inner}, "
                             f"a double at run time because high precision is off, and" if computed
                             else f"{c.from_field} ({src_port.datatype})")
                     notes.append(self.flag("rounds", c.line, f"{what} is rounded to {target_scale} decimal places "
@@ -470,7 +586,7 @@ class ModelBuilder:
 
     def build(self) -> Model:
         boxes = {"Source Qualifier": self.source_qualifier, "Expression": self.expression, "Sorter": self.sorter,
-                 "Joiner": self.joiner, "Router": self.router, "Aggregator": self.aggregator}
+                 "Joiner": self.joiner, "Router": self.router, "Aggregator": self.aggregator, "Filter": self.filter}
         for instance in self.order:
             inst = self.g.m.instances[instance]
             if inst.type == "SOURCE":

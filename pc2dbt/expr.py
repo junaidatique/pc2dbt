@@ -83,6 +83,7 @@ class Parser:
         self.i = 0
         self.symbols = {k.upper(): v for k, v in symbols.items()}
         self.aggregates = aggregates
+        self.self_compares: list[str] = []  # comparisons with the same value on both sides
 
     def peek(self):
         return self.tokens[self.i]
@@ -108,6 +109,8 @@ class Parser:
                 return left
             self.take()
             right = self.expression(BINARY[op] + 1)
+            if op in COMPARISON and bare(left.sql) == bare(right.sql):
+                self.self_compares.append(bare(left.sql))
             left = binary(op, left, right)
 
     def unary(self) -> Expr:
@@ -168,6 +171,23 @@ class Parser:
         return Expr(f"{name.lower()}({arg.sql})", "decimal" if name == "COUNT" else arg.pc_type)
 
 
+def bare(sql: str) -> str:
+    """SQL without comments, spaces or wrapping brackets, to tell whether two sides are the same value."""
+    sql = re.sub(r"\s+", "", re.sub(r"/\*.*?\*/", "", sql))
+    while sql.startswith("(") and sql.endswith(")") and depth_never_zero(sql[1:-1]):
+        sql = sql[1:-1]
+    return sql
+
+
+def depth_never_zero(inner: str) -> bool:
+    depth = 0
+    for ch in inner:
+        depth += {"(": 1, ")": -1}.get(ch, 0)
+        if depth < 0:
+            return False
+    return depth == 0
+
+
 def binary(op: str, a: Expr, b: Expr) -> Expr:
     if op in ("AND", "OR"):
         return Expr(f"({a.sql} {op.lower()} {b.sql})", "boolean")
@@ -221,13 +241,24 @@ def function(name: str, args: list[Expr]) -> Expr:
         return Expr(f"strptime({args[0].sql}, {strftime_format(args[1].sql)})", "date/time")
     if name == "TRUNC" and n == 1 and args[0].pc_type == "date/time":
         return Expr(f"date_trunc('day', {args[0].sql})", "date/time")
+    if name == "DATE_DIFF" and n == 3 and args[2].pc_type == "string":
+        # date1 - date2 in the unit asked for, with fractions (Informatica), not calendar boundaries.
+        if args[2].sql.upper() not in ("'D'", "'DD'", "'DDD'", "'DY'", "'DAY'"):
+            raise UnsupportedFunction(f"DATE_DIFF with format {args[2].sql}")
+        return Expr(f"((epoch({args[0].sql}) - epoch({args[1].sql})) / 86400)", "double")
     if name == "TRUNC" and n == 1 and args[0].pc_type in NUMERIC:
         return Expr(f"trunc({args[0].sql})", args[0].pc_type)
     raise UnsupportedFunction(name)
 
 
-def translate(text: str, symbols: dict[str, Symbol], aggregates: bool = False) -> str:
-    return Parser(text, symbols, aggregates).parse().sql
+def translate(text: str, symbols: dict[str, Symbol], aggregates: bool = False, self_compares: list | None = None) -> str:
+    """Informatica expression -> SQL. If `self_compares` is given, every comparison of a value with itself
+    (say v_PREV = X where v_PREV already holds this row's X) is appended to it."""
+    parser = Parser(text, symbols, aggregates)
+    sql = parser.parse().sql
+    if self_compares is not None:
+        self_compares.extend(parser.self_compares)
+    return sql
 
 
 def uses_aggregate(text: str) -> bool:

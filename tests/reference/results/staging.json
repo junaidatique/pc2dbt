@@ -8,6 +8,7 @@
   "tables": [
     {
       "table": "stg_customers",
+      "reference_table": "stg_customers",
       "key": [
         "customer_id"
       ],
@@ -38,6 +39,7 @@
     },
     {
       "table": "stg_locations",
+      "reference_table": "stg_locations",
       "key": [
         "location_id"
       ],
@@ -89,6 +91,7 @@
     },
     {
       "table": "stg_order_items",
+      "reference_table": "stg_order_items",
       "key": [
         "order_item_id"
       ],
@@ -126,6 +129,7 @@
     },
     {
       "table": "stg_orders",
+      "reference_table": "stg_orders",
       "key": [
         "order_id"
       ],
@@ -212,6 +216,7 @@
     },
     {
       "table": "stg_products",
+      "reference_table": "stg_products",
       "key": [
         "product_id"
       ],
@@ -284,6 +289,7 @@
     },
     {
       "table": "stg_supplies",
+      "reference_table": "stg_supplies",
       "key": [
         "supply_id",
         "product_id"

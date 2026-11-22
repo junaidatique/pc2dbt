@@ -1,0 +1,509 @@
+{
+  "reference": "dbt-labs/jaffle-shop @ 7d0d8de",
+  "summary": {
+    "matched": 19,
+    "explained": 12,
+    "not compared": 33
+  },
+  "tables": [
+    {
+      "table": "order_financials",
+      "reference_table": "orders",
+      "key": [
+        "order_id"
+      ],
+      "rows": {
+        "ours": 61465,
+        "reference": 61948,
+        "only_ours": 0,
+        "only_reference": 483,
+        "reason": "The 483 orders with no items: JNR_ORDERS_ITEMS_AGG (L1591) is a Master Outer Join that keeps the per-order item totals and drops orders with no match (decision D1).",
+        "status": "explained"
+      },
+      "columns": [
+        {
+          "ours": "order_id",
+          "reference": "order_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "customer_id",
+          "reference": "customer_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "location_id",
+          "reference": "location_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "ordered_at_day",
+          "reference": "ordered_at",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "order_subtotal",
+          "reference": "subtotal",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "100 times jaffle-shop's: ORDER_SUBTOTAL = SUBTOTAL (L1606), which holds cents because of the staging swap at L611 (decision D1)."
+        },
+        {
+          "ours": "order_tax_paid",
+          "reference": "tax_paid",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "100 times jaffle-shop's: ORDER_TAX_PAID = TAX_PAID (L1607), which holds cents because of the staging swap at L612 (decision D1)."
+        },
+        {
+          "ours": "order_total",
+          "reference": "order_total",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "100 times jaffle-shop's: ORDER_TOTAL comes from stg_orders.order_total, which holds cents because of the staging swap at L613 (decision D1)."
+        },
+        {
+          "ours": "item_lines",
+          "reference": "count_order_items",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "item_revenue",
+          "reference": "order_items_subtotal",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "100 times jaffle-shop's: it sums PRODUCT_PRICE (L1555), which holds cents because of the staging swap at L621 (decision D1)."
+        },
+        {
+          "ours": "order_cogs",
+          "reference": "order_cost",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "order_gross_profit",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's orders."
+        },
+        {
+          "ours": "order_gross_margin_pct",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's orders."
+        },
+        {
+          "ours": "effective_tax_rate",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's orders."
+        },
+        {
+          "ours": "food_item_lines",
+          "reference": "count_food_items",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "drink_item_lines",
+          "reference": "count_drink_items",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "food_share_of_lines",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's orders."
+        },
+        {
+          "ours": "drink_share_of_lines",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's orders."
+        },
+        {
+          "ours": "customer_order_number",
+          "reference": "customer_order_number",
+          "status": "explained",
+          "differing_rows": 61275,
+          "reason": "Never restarts per customer: the counter (L1705-1706) numbers all 61,465 rows by customer, day and order (decision Q13); it equals jaffle-shop's per-customer number only on the 190 rows of the first customer in that order."
+        },
+        {
+          "ours": "order_value_band",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's orders."
+        },
+        {
+          "ours": null,
+          "reference": "subtotal_cents",
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's orders."
+        },
+        {
+          "ours": null,
+          "reference": "tax_paid_cents",
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's orders."
+        },
+        {
+          "ours": null,
+          "reference": "order_total_cents",
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's orders."
+        },
+        {
+          "ours": null,
+          "reference": "is_food_order",
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's orders."
+        },
+        {
+          "ours": null,
+          "reference": "is_drink_order",
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's orders."
+        }
+      ]
+    },
+    {
+      "table": "order_item_enriched",
+      "reference_table": "order_items",
+      "key": [
+        "order_item_id"
+      ],
+      "rows": {
+        "ours": 90900,
+        "reference": 90900,
+        "only_ours": 0,
+        "only_reference": 0,
+        "reason": "",
+        "status": "matched"
+      },
+      "columns": [
+        {
+          "ours": "order_item_id",
+          "reference": "order_item_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "order_id",
+          "reference": "order_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "product_id",
+          "reference": "product_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "customer_id",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's order_items."
+        },
+        {
+          "ours": "customer_name",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's order_items."
+        },
+        {
+          "ours": "location_id",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's order_items."
+        },
+        {
+          "ours": "location_name",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's order_items."
+        },
+        {
+          "ours": "region",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's order_items."
+        },
+        {
+          "ours": "ordered_at_day",
+          "reference": "ordered_at",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "product_name",
+          "reference": "product_name",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "product_type",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's order_items."
+        },
+        {
+          "ours": "product_price",
+          "reference": "product_price",
+          "status": "explained",
+          "differing_rows": 90900,
+          "reason": "100 times jaffle-shop's: it comes from stg_products.product_price, which holds cents because of the swap at L621 (decision D1)."
+        },
+        {
+          "ours": "is_food_item",
+          "reference": "is_food_item",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "is_drink_item",
+          "reference": "is_drink_item",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "item_revenue",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's order_items."
+        },
+        {
+          "ours": "item_cogs",
+          "reference": "supply_cost",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "item_gross_profit",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's order_items."
+        },
+        {
+          "ours": "item_gross_margin_pct",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's order_items."
+        },
+        {
+          "ours": "item_tax_estimate",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's order_items."
+        },
+        {
+          "ours": "item_total_estimate",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's order_items."
+        },
+        {
+          "ours": "has_perishable_supply",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's order_items."
+        }
+      ]
+    },
+    {
+      "table": "customer_360",
+      "reference_table": "customers",
+      "key": [
+        "customer_id"
+      ],
+      "rows": {
+        "ours": 935,
+        "reference": 935,
+        "only_ours": 0,
+        "only_reference": 0,
+        "reason": "",
+        "status": "matched"
+      },
+      "columns": [
+        {
+          "ours": "customer_id",
+          "reference": "customer_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "customer_name",
+          "reference": "customer_name",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "count_lifetime_orders",
+          "reference": "count_lifetime_orders",
+          "status": "explained",
+          "differing_rows": 85,
+          "reason": "Counts only orders with items: JNR_ORDERS_ITEMS_AGG (L1591) drops the 483 orders with no items, which belong to 85 customers; each count is lower by that customer's number of such orders."
+        },
+        {
+          "ours": "first_ordered_at",
+          "reference": "first_ordered_at",
+          "status": "explained",
+          "differing_rows": 5,
+          "reason": "For 5 customers jaffle-shop's first day is a day whose only order had no items, which never reaches this table (L1591)."
+        },
+        {
+          "ours": "last_ordered_at",
+          "reference": "last_ordered_at",
+          "status": "explained",
+          "differing_rows": 5,
+          "reason": "For 5 customers jaffle-shop's last day is a day whose only order had no items, which never reaches this table (L1591)."
+        },
+        {
+          "ours": "lifetime_spend_pretax",
+          "reference": "lifetime_spend_pretax",
+          "status": "explained",
+          "differing_rows": 935,
+          "reason": "Holds LIFETIME_SPEND, the sum of order totals in cents (crossed at L2480; cents from the staging swap at L613)."
+        },
+        {
+          "ours": "lifetime_tax_paid",
+          "reference": "lifetime_tax_paid",
+          "status": "explained",
+          "differing_rows": 935,
+          "reason": "Holds LIFETIME_SPEND_PRETAX, the sum of subtotals in cents (crossed at L2481; cents from the staging swap at L611)."
+        },
+        {
+          "ours": "lifetime_spend",
+          "reference": "lifetime_spend",
+          "status": "explained",
+          "differing_rows": 935,
+          "reason": "Holds LIFETIME_TAX_PAID, the sum of tax in cents (crossed at L2482; cents from the staging swap at L612)."
+        },
+        {
+          "ours": "lifetime_cogs",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's customers."
+        },
+        {
+          "ours": "lifetime_gross_profit",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's customers."
+        },
+        {
+          "ours": "avg_order_value",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's customers."
+        },
+        {
+          "ours": "high_value_orders",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's customers."
+        },
+        {
+          "ours": "customer_type",
+          "reference": "customer_type",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "recency_days",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's customers."
+        },
+        {
+          "ours": "r_score",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's customers."
+        },
+        {
+          "ours": "f_score",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's customers."
+        },
+        {
+          "ours": "m_score",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's customers."
+        },
+        {
+          "ours": "rfm_score",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's customers."
+        },
+        {
+          "ours": "rfm_segment",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "No twin column in jaffle-shop's customers."
+        }
+      ]
+    }
+  ]
+}

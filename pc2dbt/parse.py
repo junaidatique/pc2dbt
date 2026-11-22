@@ -150,6 +150,16 @@ class Connector:
 
 
 @dataclass
+class MappingVariable:
+    """A $$ mapping variable or parameter (MAPPINGVARIABLE)."""
+    name: str               # e.g. $$RUN_DATE
+    datatype: str
+    default: str
+    is_param: bool
+    line: int
+
+
+@dataclass
 class Mapping:
     name: str
     transformations: dict[str, Transformation]
@@ -157,6 +167,7 @@ class Mapping:
     connectors: list[Connector]
     line: int
     end: int
+    variables: dict[str, MappingVariable] = field(default_factory=dict)
 
 
 @dataclass
@@ -207,7 +218,10 @@ def _mapping(node: Node) -> Mapping:
                  for i in node.kids("INSTANCE")}
     connectors = [Connector(c.get("FROMINSTANCE"), c.get("FROMFIELD"), c.get("TOINSTANCE"), c.get("TOFIELD"), c.line)
                   for c in node.kids("CONNECTOR")]
-    return Mapping(node.get("NAME"), transformations, instances, connectors, node.line, node.end)
+    variables = {v.get("NAME").upper(): MappingVariable(v.get("NAME"), v.get("DATATYPE", ""), v.get("DEFAULTVALUE", "") or "",
+                                                       v.get("ISPARAM") == "YES", v.line)
+                 for v in node.kids("MAPPINGVARIABLE")}
+    return Mapping(node.get("NAME"), transformations, instances, connectors, node.line, node.end, variables)
 
 
 def parse_file(path: str | Path) -> Folder:

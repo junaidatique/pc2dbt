@@ -8,20 +8,24 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
 MINI_XML = FIXTURES / "mini.xml"
 MINI_MARTS_XML = FIXTURES / "mini_marts.xml"
+MINI_ENRICHED_XML = FIXTURES / "mini_enriched.xml"
 # The demo XML is not committed (it holds a plaintext credential). Clone it into external/.
 DEMO_XML = ROOT / "external" / "flowline-pwc-demo" / "FLOWLINE_DEMO_JAFFLESHOP.xml"
 
 
-def render(sql: str) -> str:
+def render(sql: str, dbt_vars: dict | None = None) -> str:
     """Render the Jinja calls our models use, so DuckDB can run them without dbt.
-    source('raw', 'x') becomes raw.x; ref('x') becomes x (a table the test creates in main)."""
+    source('raw', 'x') becomes raw.x; ref('x') becomes x (a table the test creates in main);
+    var('x', 'default') becomes dbt_vars['x'] if given, else the default (as dbt --vars would)."""
+    dbt_vars = dbt_vars or {}
+    sql = re.sub(r"\{\{\s*var\('(\w+)',\s*'([^']*)'\)\s*\}\}", lambda m: dbt_vars.get(m[1], m[2]), sql)
     sql = re.sub(r"\{\{\s*config\([^}]*\)\s*\}\}", "", sql)
     sql = re.sub(r"\{\{\s*ref\('(\w+)'\)\s*\}\}", r"\1", sql)
     return re.sub(r"\{\{\s*source\('(\w+)',\s*'(\w+)'\)\s*\}\}", r"\1.\2", sql)
 
 
-def run_model(con: duckdb.DuckDBPyConnection, sql: str, order_by: str = "1") -> list[tuple]:
-    return con.execute(f"select * from ({render(sql)}) order by {order_by}").fetchall()
+def run_model(con: duckdb.DuckDBPyConnection, sql: str, order_by: str = "1", dbt_vars: dict | None = None) -> list[tuple]:
+    return con.execute(f"select * from ({render(sql, dbt_vars)}) order by {order_by}").fetchall()
 
 
 def columns(con: duckdb.DuckDBPyConnection, sql: str) -> list[str]:

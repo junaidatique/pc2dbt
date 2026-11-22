@@ -122,3 +122,15 @@ def test_null_group_keys_form_one_group(models):
         (None, None, D("2"), D("2"), D("3.00"), dt.datetime(2025, 1, 6), dt.datetime(2025, 1, 7)),
         ("s1", "North", D("3"), D("2"), D("7.50"), dt.datetime(2025, 1, 1), dt.datetime(2025, 1, 5)),
         (None, None, D("3"), D("3"), D("15.00"), dt.datetime(2025, 1, 1), dt.datetime(2025, 1, 4))]
+
+
+def test_a_variable_that_reads_one_below_it_is_not_the_counter(tmp_path):
+    # With v_VISIT_SEQ above v_PREV_PERSON it compares the PREVIOUS row's person: a real per-person counter,
+    # a different pattern from the one in the XML, so it stops (decision Q13, prompt 12).
+    prev = ('<TRANSFORMFIELD DATATYPE="string" DEFAULTVALUE="" EXPRESSION="PERSON" EXPRESSIONTYPE="GENERAL" '
+            'NAME="v_PREV_PERSON" PORTTYPE="LOCAL VARIABLE" PRECISION="10" SCALE="0"/>')
+    seq = ('<TRANSFORMFIELD DATATYPE="decimal" DEFAULTVALUE="" EXPRESSION="IIF(v_PREV_PERSON = PERSON, v_VISIT_SEQ + 1, 1)" '
+           'EXPRESSIONTYPE="GENERAL" NAME="v_VISIT_SEQ" PORTTYPE="LOCAL VARIABLE" PRECISION="10" SCALE="0"/>')
+    gap = "\n            "
+    with pytest.raises(UnsupportedElement, match="EXP_VISIT_NUM.v_VISIT_SEQ"):
+        convert_edited(tmp_path, prev + gap + seq, seq + gap + prev)

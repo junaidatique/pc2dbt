@@ -530,6 +530,85 @@ window.AGENT_LOG = {
     }
    ],
    "noneNote": ""
+  },
+  {
+   "n": 12,
+   "title": "Decisions for step 3, the RFM facts, and build step 3 (enriched marts)",
+   "when": "22 Nov 2026, 08:06",
+   "kind": "typed",
+   "prompt": [
+    "Thanks, I checked your answer and did hold. 94 unit test and 6 reference test pass on my side, and 190 reasons read correctly now. For your correction to my point, I believe you are right. The first customer flag compares each value with itself, so only the counter depends on the order. Log it as a correction of my point. For the question one about the variable post, I think so. Go ahead with your recommendation decided by port order. One addition, when you paste a variable calculation into the output, keep the variable name and line as a short comment so I can trace each piece back to the XML. For the question 2 about checking enriched, go with your 3 checks. I worked out what the RFM score should give on the seed, so add these to the seed facts and confirm them that the last order is 31st August 2025. So, with the default run date of 31st December 2025, every customer recency is at least 122 days, and the recency score is 1 for everyone. Lifetime spent is summed in cent. The lowest is 624, so the spend score is 3 for everybody. So nobody is champion or loyal. The 929 customers with the 2 or more orders are at underscore risk, and the 6 with 1 order are standard. So if the file list or the message changes after I approve, show me the change before you commit. For the step 3, let's build it now. Test first, and when it's done, stop and show me the SQL for exp underscore mark underscore first underscore customer, one variable pasted into its output. For example, the margin at line 1513, the value, the band step, the seed facts with their result, the test result, the time for this step, the commit message. Don't commit until I have checked."
+   ],
+   "answer": [
+    "Correction of your point (prompt 11), which you confirmed: only the counter depends on row order. The first-customer flag compares each value with itself, because L2124-2126 overwrite the \"previous\" values before L2127 reads them.",
+    "Saved your rule: if the file list or the message changes after you approve a commit, I show you the change before committing. The step 2 commit had gained README.md and three message lines after your approval.",
+    "Recorded your two step 3 decisions, and the Q13 refinement, on the Decisions page.",
+    "Built step 3 test-first. Variable ports are decided by port order: a variable that uses this row only is pasted into the outputs that read it, with a `/* name line */` comment; the one variable that reads a previous row (the counter, L1706) keeps its Sorter. The first-customer flag is translated like any other expression and flagged as comparing each value with itself.",
+    "New parts: the Filter box (a row whose condition is NULL is dropped), `$$RUN_DATE` as the dbt var `run_date` with the XML's default 2025-12-31 and a flag naming the parameter file (L4554), and DATE_DIFF in days with fractions.",
+    "A third hand-made fixture covers these parts, and the real enriched mapping runs on hand-made staging rows with every value worked out by hand, including a run_date override that turns one customer LOYAL.",
+    "Your RFM facts all hold on the seed: last order 31 Aug 2025, recency at least 122 days, R 1 for all 935, lowest lifetime spend 624 cents, M 3 for all, no CHAMPION or LOYAL, 929 AT_RISK and 6 STANDARD. They are 17 seed facts in `tests/test_reference_enriched.py`, each answered from our tables and from a separate query on the raw seed.",
+    "Twin columns compared with jaffle-shop: 19 match, 12 differ for listed reasons, 0 are unexplained, 33 have no twin.",
+    "`out/` now holds all 16 models with 72 flags. The staging and core models are unchanged byte for byte.",
+    "Time: step 3 took 16 minutes of agent time (08:06 to 08:22 UTC), against the 1 h estimate."
+   ],
+   "mistakes": [
+    {
+     "what": "A check after a `sed` edit looked for the wrong text and reported the edit missing, so the next script asserted on it and stopped before writing anything.",
+     "by": "Agent",
+     "how": "The script's own check failed on its first replacement.",
+     "changed": "Read the line, saw the edit was there, and reran the script without that step."
+    }
+   ],
+   "noneNote": ""
+  },
+  {
+   "n": 13,
+   "title": "The margins, and a plan for step 4",
+   "when": "22 Nov 2026, 08:38",
+   "kind": "typed",
+   "prompt": [
+    "Okay, I went through step 3, 117 unit test and 9 reference test pass on my side, and I built all 16 model myself. But I liked most about the commands on the pasted variables make it each piece easy to trace. The first customer flag now visibly compares each value with itself. I also noticed that the enriched counter puts null last while the core one puts them first, and the matches each sorter own settings. The RFM facts and the 85 customers check out on my side. There is one gap, however, related to margins. I curate the build tables. The item margin is between 99.65% and the 99.89% on every item because the price is in cent, the cost is in dollars. In product underscore daily underscore performance, all 3635 rows have margin underscore PCT 0 and perishable underscore sales underscore flag is 1. The swap at line 2542 and 92543 puts the always 0 perishable flag into margin and the 99.8% margin rounded to no decimals into the flag. So every product day says perishable while no supply is perishable. Add both as seed facts and log this as caught by me, then show me the results and updated commit message. I'll approve the commit message after that. For the step 4, in the same reply, give me a short plan for building. How you will test the unknown element handling decision for the question 18, which changes you will make to the copy of the handmade XML and the report and the exit code should show an outline of the readme covering everything the brief asks for, how to run it, assumptions, what isn't handled, where the output is most likely wrong, where you got things wrong and how it was got. All prompts from the first one, the exported conversation and the process. Wait for my decisions before building step 4. Before you send it, point 3 is my recommendation. Your prompts were drafted with the help from this chat, and the brief asked for all the prompts. So saying so upfront is the honest variant, and it reads red. It says nothing about the restart, so drop it if you would rather handle that differently. I'll handle the transcript export with you at the end. It needs the password and the brief link removed, and the build session can do that for on its own transcript. Bill me when it has replied, and I will check the facts and the step 4 plan. Also, before giving me, do an independent verification in a sub agent so that we verify that everything is fine and working."
+   ],
+   "answer": [
+    "Your margin finding holds: item margins run from 0.9965 (BEV-002) to 0.9989 (JAF-001), all 3,635 product-days have MARGIN_PCT 0 and PERISHABLE_SALES_FLAG 1, and no supply is perishable. Four seed facts now pin it (21 in all).",
+    "An independent check in a separate agent, which saw the repo and the claims but not my conclusions: tests, regeneration, the XML read against the generated SQL, every seed fact recomputed straight from the CSVs, and the file list and credential scan all passed, with no wrong SQL.",
+    "It found three gaps, all fixed test-first: 7 rounding flags were missing (79 flags now); 8 seed facts compared with a constant or a plain count, so they now apply the XML's rules to the seed; and no test pinned that a variable reading one below it is rejected.",
+    "Gave a short plan for step 4 (Q18 tests, report and exit code, README outline), with your recommendation on the prompts note and a proposal for the two context restarts. Waiting for your decisions before building.",
+    "Time: 18 minutes of agent time for the margin facts, the independent check and its fixes (08:38 to 08:56 UTC); step 3 in all took 34 minutes."
+   ],
+   "mistakes": [
+    {
+     "what": "The seed facts didn't check the margins. Every item margin is 99.65% to 99.89% (price in cents, cost in dollars, L1513), and the swap at L2542-2543 gives all 3,635 product-days MARGIN_PCT 0 and PERISHABLE_SALES_FLAG 1, so every product-day says perishable while no supply is.",
+     "by": "You",
+     "how": "You queried the built tables.",
+     "changed": "Four seed facts added (21 in all), each answered from our tables and from the raw seed; all match."
+    },
+    {
+     "what": "The rounding flags missed a division inside a pasted variable (v_MARGIN_CALC, L1513) and stopped at the Union, so 7 target columns that round were not flagged (L2494, L2495, L2502, L2503, L2509, L2510, L2530).",
+     "by": "Agent",
+     "how": "The independent check, run in a separate agent, read the flags against the SQL.",
+     "changed": "Flags follow every Union branch and count a division inside a pasted variable; tests added."
+    },
+    {
+     "what": "8 seed facts compared our value with a constant or a plain row count instead of applying the XML's rule to the seed, so a converter that set every R score to 1 would still pass.",
+     "by": "Agent",
+     "how": "The independent check.",
+     "changed": "Each seed side now applies the rule: R, F and M thresholds, the segment rule, ORDER_TOTAL >= 50, the NULL keys, the product-day margin."
+    },
+    {
+     "what": "No test pinned that a variable reading one below it (a real per-person counter) is rejected.",
+     "by": "Agent",
+     "how": "The independent check tried it on a scratch copy.",
+     "changed": "Test added."
+    },
+    {
+     "what": "While fixing the flags, I built the \"divides in\" text even when nothing divides, and the converter crashed.",
+     "by": "Agent",
+     "how": "The next run's traceback.",
+     "changed": "Fixed before any file was written; all tests pass."
+    }
+   ],
+   "noneNote": ""
   }
  ],
  "statusNote": "Status: **open** means not decided or not done, **decided** means we agreed what to do, **handled** means it is done and checked.",
@@ -574,13 +653,18 @@ window.AGENT_LOG = {
     },
     {
      "watch": "The per-customer order counter never restarts (L3588–3589, L1705–1706), and the first-customer flag is always 0 (L2124–2127).",
-     "why": "We copy these two patterns and flag them; any other row-by-row pattern fails clearly (Q13).",
-     "status": "decided"
+     "why": "Both copied and flagged. Only the counter reads a previous row; the first-customer flag compares each value with itself (prompt 12). Any other variable that reads a previous row fails clearly (Q13).",
+     "status": "handled"
     },
     {
      "watch": "All 10 Master Outer joins keep the lookup side (for example L3651).",
      "why": "We copy them and flag each one with the side it keeps (D1). That drops the 483 orders with no items from ORDERS (61,465 rows, checked in step 2) and ORDER_FINANCIALS. The extra rows they create on the seed data (4 stores with no orders) never reach a table.",
      "status": "decided"
+    },
+    {
+     "watch": "Item margins are 99.65% to 99.89% on every item, and every product-day says perishable.",
+     "why": "Copied (D1): the margin divides cents by cents minus dollars (L1513), and the crossed connectors at L2542-2543 swap margin and flag. Four seed facts pin it (prompt 13).",
+     "status": "handled"
     },
     {
      "watch": "Two ports drop rows with an empty input (L235, L455).",
@@ -589,13 +673,13 @@ window.AGENT_LOG = {
     },
     {
      "watch": "The target instance `ORDER_FINANCIALS1` writes the table `ORDER_FINANCIALS` (L2391).",
-     "why": "Model names come from the table, not the instance.",
-     "status": "decided"
+     "why": "Model names come from the table, not the instance; the model is `order_financials`.",
+     "status": "handled"
     },
     {
      "watch": "`$$RUN_DATE` defaults to 12/31/2025 (L3104) and drives recency.",
-     "why": "A dbt variable with the same default, plus a flag that the parameter file at L4554 could override it (Q15).",
-     "status": "decided"
+     "why": "The dbt var `run_date` with the same default, plus a flag that the parameter file at L4554 could override it (Q15).",
+     "status": "handled"
     },
     {
      "watch": "The perishable rule (L504) compares text to 'Y' and '1'.",
@@ -609,8 +693,8 @@ window.AGENT_LOG = {
     },
     {
      "watch": "15 Sorters, none of which removes duplicates.",
-     "why": "Dropped as steps. The 3 that feed order-dependent ports keep their sort keys, case and NULL settings, and are flagged (Q12).",
-     "status": "decided"
+     "why": "Dropped as steps, except the 2 that feed the counters, which keep their sort keys, case and NULL settings and are flagged (Q12). The first-customer flag's Sorter is dropped too: its order changes no result (prompt 12).",
+     "status": "handled"
     },
     {
      "watch": "10 of the 16 Joiners are Master Outer (example L1350).",
@@ -619,8 +703,8 @@ window.AGENT_LOG = {
     },
     {
      "watch": "The 5 enriched marts have no reference model.",
-     "why": "Only our own tests can check them (Q19).",
-     "status": "decided"
+     "why": "Checked by hand-made rows, 21 facts that apply the XML's rules straight to the raw seed, and twin columns compared with jaffle-shop (prompts 12, 13).",
+     "status": "handled"
     }
    ]
   },

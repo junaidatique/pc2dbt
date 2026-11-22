@@ -9,7 +9,10 @@ window.DECISIONS = {
     "D2: the reference is dbt-labs/jaffle-shop.",
     "D3: the credential in the command task is never shown, copied or committed.",
     "Model names come from the table, not the instance (prompt 6).",
-    "The repo will be public, and the deadline is 24 Nov 2026."
+    "The repo will be public, and the deadline is 24 Nov 2026.",
+    "Q13 refined (prompt 12): the first-customer flag compares each value with itself (L2124-2127), so only the counter reads a previous row.",
+    "Variable ports are decided by port order (prompt 12): one that uses this row only is pasted into the outputs that read it, with a short comment naming the variable and its line; one that reads a previous row must be the counter, and only then is its Sorter kept.",
+    "The enriched marts are checked three ways (prompt 12): hand-made rows with hand-worked results, facts computed straight from the raw seed, and a comparison with jaffle-shop wherever a column has a twin."
   ],
   groups: ["Getting set up", "Shape of the dbt project", "Copying the XML exactly (how D1 applies)", "Edges", "Checking"],
   items: [

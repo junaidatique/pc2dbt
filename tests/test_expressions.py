@@ -122,3 +122,26 @@ def test_aggregate_outside_an_aggregator_is_not_translated():
     with pytest.raises(UnsupportedFunction) as e:
         translate("SUM(AMOUNT)", {"AMOUNT": Symbol("amount", "decimal")})
     assert e.value.name == "SUM"
+
+
+# ---------------------------------------------------------------- DATE_DIFF
+
+DATES = {"D1": Symbol("d1", "date/time"), "D2": Symbol("d2", "date/time")}
+DATE_TYPES = {"d1": "timestamp", "d2": "timestamp"}
+
+
+def test_date_diff_in_days_keeps_fractions():
+    # Informatica returns date1 - date2 in the unit asked for, with fractions (not calendar boundaries).
+    row = {"d1": dt.datetime(2025, 6, 30), "d2": dt.datetime(2025, 6, 29, 12, 0)}
+    assert evaluate("DATE_DIFF(D1, D2, 'DD')", DATES, row, DATE_TYPES) == 0.5
+
+
+def test_date_diff_of_truncated_days_is_whole():
+    row = {"d1": dt.datetime(2025, 12, 31, 9, 0), "d2": dt.datetime(2025, 8, 31, 18, 46)}
+    assert evaluate("DATE_DIFF(TRUNC(D1), TRUNC(D2), 'DD')", DATES, row, DATE_TYPES) == 122
+
+
+def test_date_diff_in_other_units_is_not_translated():
+    with pytest.raises(UnsupportedFunction) as e:
+        translate("DATE_DIFF(D1, D2, 'MM')", DATES)
+    assert "DATE_DIFF" in e.value.name
