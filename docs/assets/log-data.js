@@ -453,7 +453,7 @@ window.AGENT_LOG = {
     "Check 3 for the marts: 31 columns match, 11 differ for listed reasons, 0 are unexplained, and 11 have no twin. ORDERS has 61,465 rows; the 483 orders with no items are listed as explained missing rows.",
     "Order amounts are exactly 100 times too small and customer lifetime amounts exactly 100 times too big, both from the staging swap. The counter equals jaffle-shop's per-customer number on 190 of 61,465 rows by chance.",
     "The docs don't settle how PowerCenter groups NULL keys in an Aggregator. The converter uses SQL's rule (one NULL group); the seed has no NULL keys, and the README will say so.",
-    "Time: step 2 took 25 minutes of agent time (18:02 to 18:27 UTC), against the 1 h 15 min estimate."
+    "Time: step 2 took 27 minutes of agent time (18:02 to 18:28 UTC), against the 1 h 15 min estimate."
    ],
    "mistakes": [
     {
@@ -549,7 +549,7 @@ window.AGENT_LOG = {
     "Your RFM facts all hold on the seed: last order 31 Aug 2025, recency at least 122 days, R 1 for all 935, lowest lifetime spend 624 cents, M 3 for all, no CHAMPION or LOYAL, 929 AT_RISK and 6 STANDARD. They are 17 seed facts in `tests/test_reference_enriched.py`, each answered from our tables and from a separate query on the raw seed.",
     "Twin columns compared with jaffle-shop: 19 match, 12 differ for listed reasons, 0 are unexplained, 33 have no twin.",
     "`out/` now holds all 16 models with 72 flags. The staging and core models are unchanged byte for byte.",
-    "Time: step 3 took 16 minutes of agent time (08:06 to 08:22 UTC), against the 1 h estimate."
+    "Time: step 3 took 17 minutes of agent time (08:06 to 08:23 UTC), against the 1 h estimate."
    ],
    "mistakes": [
     {
@@ -574,7 +574,7 @@ window.AGENT_LOG = {
     "An independent check in a separate agent, which saw the repo and the claims but not my conclusions: tests, regeneration, the XML read against the generated SQL, every seed fact recomputed straight from the CSVs, and the file list and credential scan all passed, with no wrong SQL.",
     "It found three gaps, all fixed test-first: 7 rounding flags were missing (79 flags now); 8 seed facts compared with a constant or a plain count, so they now apply the XML's rules to the seed; and no test pinned that a variable reading one below it is rejected.",
     "Gave a short plan for step 4 (Q18 tests, report and exit code, README outline), with your recommendation on the prompts note and a proposal for the two context restarts. Waiting for your decisions before building.",
-    "Time: 18 minutes of agent time for the margin facts, the independent check and its fixes (08:38 to 08:56 UTC); step 3 in all took 34 minutes."
+    "Time: 18 minutes of agent time for the margin facts, the independent check and its fixes (08:38 to 08:57 UTC); step 3 in all took 35 minutes."
    ],
    "mistakes": [
     {
@@ -606,6 +606,86 @@ window.AGENT_LOG = {
      "by": "Agent",
      "how": "The next run's traceback.",
      "changed": "Fixed before any file was written; all tests pass."
+    }
+   ],
+   "noneNote": ""
+  },
+  {
+   "n": 14,
+   "title": "Step 3 approved, step 4 decisions, and build step 4 (unknown elements, README)",
+   "when": "22 Nov 2026, 09:12",
+   "kind": "typed",
+   "prompt": [
+    "Thanks. I checked the fixes, 120 unit tests and 9 reference test pass on my side, and the new rounding flags and the rule based seed facts look right. The independent check was worth it. The commit is approved with these 31 files and the message. For the step 4, my answers are for the unknown elements approved as you described, the guarded line, the not converted section, the exit code, and the three variants on a copy of the handmade XML. The outline for the readme outline approved with three changes. In the prompt section, for the separate chat, mention that I was independently checking the results on my own, and so this is the reference for the separate chat. And for the keep agent underscore log md word for word at is it. Keep the line about the session running out of context twice and contributing from summaries. The export shows it and it's better set upfront. Under how to run, give the exact clone commands for external directory with the pinned jaffel dash shop commit. Then check them, clone the repo into temporary folder, follow the readme word for word, and tell me what happened. For the tool slash build underscore demo dot pys, we need to add it. Then build step 4, test first. When it's done, stop and show me. 1 dbt error message for a model that wasn't covered. The readme, what happened on the fresh clone, the results, the time for each step, and the total, and also the commit message. Don't commit until I have checked it."
+   ],
+   "answer": [
+    "Committed step 3 as `6d9e538`: the 31 files and the message you approved.",
+    "Built Q18 test-first. The converter now works model by model: a model it can't translate becomes one guarded line, `{% if execute %}{{ exceptions.raise_compiler_error(...) }}{% endif %}`, naming the element and its XML line; `flags.md` lists it under \"Not converted\"; the command exits with code 1. Unknown ports and unreadable expressions take the same path, with the port's line.",
+    "Tests use a temporary copy of the hand-made `mini_marts.xml` with one unknown element on the path to `T_STORE_TOTALS` (an unknown box type, an unknown function, a missing port): the other models convert, the report lists it, the CLI exits with 1, and a dbt test shows dbt builds the other models and stops on this one with the message. The real XML still converts all 16 models with exit code 0.",
+    "Added `tools/build_demo.py` (loads the seeds with the XML's types, runs dbt build on `out/`, prints row counts) with a test.",
+    "Wrote the README from the approved outline with your three changes, and exact clone commands for `external/` pinned to the demo repo at `550a222` and jaffle-shop at `7d0d8de`.",
+    "Followed the README word for word on a fresh clone in a temporary folder (only the repo URL was replaced by this folder): every command exited with 0, `git status out/` showed no change, 133 unit and 11 reference tests passed, and `build_demo.py` built all 16 tables.",
+    "The snapshot now uses the README's command (every mapping, in the XML's order), so `flags.md` lists the same flags in that order.",
+    "Time: about 15 minutes of agent time (from 09:12 UTC)."
+   ],
+   "mistakes": [
+    {
+     "what": "Three time lines in this log were read from the clock just before the final message, so they were 1 to 2 minutes short of the transcript (prompts 10, 12, 13).",
+     "by": "Agent",
+     "how": "Measured every prompt from the transcript's timestamps for the README.",
+     "changed": "The log now uses the transcript's times."
+    },
+    {
+     "what": "A Q18 test looked up `NAME=\"AGG_BY_STORE\" REUSABLE`, which matches two lines.",
+     "by": "Agent",
+     "how": "The test failed on the lookup.",
+     "changed": "The lookup names the transformation line."
+    },
+    {
+     "what": "The first README draft said `flags.md` has 15 left-out items; it has 21 (16 TRUNCATE Pre SQLs, the workflow, the command task and 3 sessions).",
+     "by": "Agent",
+     "how": "Checked the README's numbers against `flags.md` before the fresh-clone run.",
+     "changed": "The README says 21."
+    }
+   ],
+   "noneNote": ""
+  },
+  {
+   "n": 15,
+   "title": "Three fixes before the step 4 commit (rounding row, repo URL, stale explainer pages)",
+   "when": "22 Nov 2026, 12:50",
+   "kind": "typed",
+   "prompt": [
+    "I went through the step 4, checked the unit test and the reference test, everything passed on my side, and the fresh clone run is exactly what I need, what I wanted. Um, 3 fixes before the commit. In the readme wrong on purpose table, the rounding row says 79 flags in flags.md, but only 25 of them are rounding flags. Change it to the rounding out. Confirm it first and then make this change. I have created a new repo at github.com/jnetatik/pc2dpt. Yeah, that's one. And put that in the URL place or in the readme in the clone command. The mapping page end to end, that page still shows the handwritten SQL from before the build. It uses date_trunk for order at date, shows text paid sends as 0.42. I mean, check this one and add a link to the reference result page which shows all three mapping box by box. So make sure that you update this one and make sure that all the pages show the updated one. I mean, latest after the result, latest finding. You can also, write history that what we found previously and what we have found now. The file list changes. So show me the files and a message before you commit. Don't commit. Uh, Don't push yet. I'll add exported conversation and my other things as well."
+   ],
+   "answer": [
+    "Confirmed the rounding row first: `flags.md` has 79 flags of 10 kinds, and 25 of them are `rounds`, in 10 models. The README row now says \"25 `rounds` flags in `flags.md`, in 10 models\".",
+    "The repo you named, typed as github.com/jnetatik/pc2dpt, is `github.com/junaidatique/pc2dbt` (public, still empty), checked with `gh repo view`. The README's clone command now uses it.",
+    "The \"One mapping, end to end\" page showed the SQL hand-written before the build. Section 4 now shows `out/models/m_fl_js_staging_full/stg_orders.sql` word for word, the `raw_orders` entry of `sources.yml`, and the first order from our build and jaffle-shop's (our `tax_paid_cents` is 0 and `subtotal_cents` 7, rounded by `NUMBER(15,0)`). It links to the Results page, which shows all three mappings box by box. A new section 5 lists what the page said before the build and what is true now.",
+    "That data comes from a new builder, `tools/docs/build_example_output.py`, and the row from a new reference test that writes `tests/reference/results/example_row.json`. A new test, `tests/test_docs_fresh.py`, rebuilds every generated docs file except the log and fails if one is stale. The other generated files were already current.",
+    "Searched every page for the same problem and fixed it: the five-steps page (the `date_trunc` line, \"6 flags\", the folder tree and two \"still open\" notes now read from the generated SQL or say what was decided), the overview (a \"where it stands\" note, check 3 for the enriched marts), and the glossary (enriched-mart twins, the Sorters, and a few lines from before the build).",
+    "Found while doing it: the raw PC Sources declare 5 primary keys and 4 foreign keys (L11-41), and the converter writes no dbt tests for them. Added to the README under What isn't handled; not built.",
+    "Tests: 139 unit and 12 reference tests pass. Nothing committed or pushed.",
+    "Time: about 17 minutes of agent time (from 12:50 UTC)."
+   ],
+   "mistakes": [
+    {
+     "what": "The README's rounding row said \"79 flags in `flags.md`\", the count of all flags; only 25 are rounding flags.",
+     "by": "You",
+     "how": "You read the row against `flags.md`.",
+     "changed": "The row says 25 `rounds` flags, in 10 models, counted by a script."
+    },
+    {
+     "what": "The explainer kept the SQL hand-written before the build: `date_trunc` for ORDERED_AT_DAY and 0.42 in `tax_paid_cents`, which really stores 0. The five-steps page, the overview and the glossary had the same kind of stale lines. Step 4's checks covered the README and code, not the pages.",
+     "by": "You",
+     "how": "You opened the \"One mapping, end to end\" page; the agent then searched every page.",
+     "changed": "Those pages read the generated files, a history section records the old version, and `tests/test_docs_fresh.py` fails when a generated docs file is stale."
+    },
+    {
+     "what": "The new sources tab first said \"5 more raw tables, then raw_orders\"; `raw_orders` is the third of six.",
+     "by": "Agent",
+     "how": "Read the page back in the browser.",
+     "changed": "The builder lists the tables before and after `raw_orders` by name."
     }
    ],
    "noneNote": ""
@@ -728,13 +808,13 @@ window.AGENT_LOG = {
     },
     {
      "watch": "PowerCenter behaviour (port order, join types, NULL handling, overrides) comes from Informatica's documentation.",
-     "why": "We have no running PowerCenter to test against; the README must say so.",
-     "status": "open"
+     "why": "We have no running PowerCenter to test against; README.md says so under Unknowns (prompt 14).",
+     "status": "handled"
     },
     {
      "watch": "A failed step doesn't stop the workflow (L4622–4625, L793).",
-     "why": "Out of scope; the README says so (Q17).",
-     "status": "decided"
+     "why": "Out of scope; README.md says so under What isn't handled (Q17, prompt 14).",
+     "status": "handled"
     },
     {
      "watch": "Supply cost passes through a whole-number port (L3382).",
@@ -758,13 +838,23 @@ window.AGENT_LOG = {
     },
     {
      "watch": "Another XML may contain boxes or functions the converter doesn't know.",
-     "why": "Everything else is converted; the unknown model fails at dbt compile with the element name and its line, is listed in the report, and the converter exits with an error (Q18).",
-     "status": "decided"
+     "why": "Everything else is converted; the unknown model fails at dbt compile with the element name and its line, is listed in the report, and the converter exits with an error (Q18). Built and tested in prompt 14.",
+     "status": "handled"
     },
     {
      "watch": "The scripts that generate the docs data lived in a temporary folder.",
      "why": "Moved into `tools/docs/` in build step 1.",
      "status": "handled"
+    },
+    {
+     "watch": "Explainer pages written before the build can go stale.",
+     "why": "Pages that show output now read it from generated files, and `tests/test_docs_fresh.py` fails when a generated docs file doesn't match its builder (prompt 15).",
+     "status": "handled"
+    },
+    {
+     "watch": "The raw PC Sources declare 5 primary keys and 4 foreign keys (L11-41).",
+     "why": "The converter writes no dbt tests for them. README.md lists it under What isn't handled (prompt 15).",
+     "status": "open"
     }
    ]
   },
@@ -784,6 +874,11 @@ window.AGENT_LOG = {
     {
      "watch": "The repo will be public.",
      "why": "So the brief's \"[GitHub handles]\" placeholder needs no answer (prompt 6).",
+     "status": "handled"
+    },
+    {
+     "watch": "The README's clone command needs the repo's address.",
+     "why": "`github.com/junaidatique/pc2dbt`, from you in prompt 15.",
      "status": "handled"
     }
    ]

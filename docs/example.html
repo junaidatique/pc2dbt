@@ -5,8 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>One Mapping, End to End</title>
 <link rel="stylesheet" href="assets/site.css">
+<style>
+  .hist-item { border-top: 1px solid var(--border); padding: 4px 0 8px; }
+  .hist-item h3 { margin: 12px 0 0; font-size: 16px; }
+  .hist-item .io pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .hist-item .io p { margin: 0; }
+  .hist-item.flagged h3::after { content: "  flagged"; color: var(--warn); font-size: 12px; font-weight: 600; }
+</style>
 <script src="assets/glossary-data.js"></script>
 <script src="assets/example-data.js"></script>
+<script src="assets/example-output.js"></script>
 <script src="assets/site.js"></script>
 </head>
 <body>
@@ -19,7 +27,7 @@
   <h1>One mapping, end to end</h1>
   <p class="lead">We follow one small path through the XML: raw orders in, <code>STG_ORDERS</code> out. It is short, but it touches every piece: a PC Source, three kinds of box, a PC Target, and the session and workflow that run it.</p>
   <div class="callout">
-    <p>The path lives inside mapping <code>m_FL_JS_STAGING_FULL</code> <a class="L">L90</a>, which writes 6 PC Targets. Here we look at the orders path only. All XML on this page was pulled from the file by a script. Attributes are trimmed to the ones that matter, and line numbers open GitHub.</p>
+    <p>The path lives inside mapping <code>m_FL_JS_STAGING_FULL</code> <a class="L">L90</a>, which writes 6 PC Targets. Here we look at the orders path only. All XML on this page was pulled from the file by a script, and all SQL is the converter's own output. Attributes are trimmed to the ones that matter, and line numbers open GitHub.</p>
   </div>
 
   <!-- ============ 1. who runs it ============ -->
@@ -48,7 +56,7 @@
     <dt>Truncate target first?</dt><dd>The session option says NO <a class="L">L919</a>, but the target's <a class="term" data-term="pre-sql">Pre SQL</a> empties it anyway: <code>TRUNCATE TABLE STG.STG_ORDERS</code> <a class="L">L541</a>. So every run is a full reload.</dd>
     <dt>Treat source rows as</dt><dd>Insert <a class="L">L995</a></dd>
   </dl>
-  <p class="small muted">None of this changes <em>what</em> is computed. It is about <em>how</em> rows are written. dbt handles that with <a class="term" data-term="materialization">materialization</a>, which is still an open question.</p>
+  <p class="small muted">None of this changes <em>what</em> is computed. It is about <em>how</em> rows are written. dbt handles that with <a class="term" data-term="materialization">materialization</a>: each model is a table, rebuilt on every run (decision Q9).</p>
 
   <div class="tabs-group">
     <div class="tabs" role="tablist">
@@ -77,103 +85,118 @@
     <figcaption id="swap-cap"></figcaption>
   </figure>
   <div class="callout warn">
-    <p><b>What we do:</b> the SQL copies the connectors exactly, so <code>subtotal_cents</code> really holds dollars, and every one of these columns gets a <a class="term" data-term="flag">flag</a>. This is decision D1: we copy the XML, we don't fix it.</p>
+    <p><b>What we do:</b> the SQL copies the connectors exactly, so <code>subtotal_cents</code> really holds dollars, and every one of these columns gets a <a class="term" data-term="flag">flag</a>. This is decision D1: we copy the XML, we don't fix it. The column's own type, <code>NUMBER(15,0)</code>, then rounds those dollars to whole numbers: 7.00 is stored as 7 (decision Q11).</p>
   </div>
 
   <!-- ============ 4. output ============ -->
-  <h2 id="output">4 · The output: what the converter should write</h2>
-  <p>Hand-written for now, to show the target. Each box becomes one <a class="term" data-term="cte">CTE</a>, the Sorter disappears, and the final <code>select</code> copies the connectors, flags included.</p>
+  <h2 id="output">4 · The output: what the converter wrote</h2>
+  <p>This is <code id="out-path"></code>, word for word, as <code>pc2dbt convert</code> wrote it. Each box is one <a class="term" data-term="cte">CTE</a>, the Sorter is dropped with a comment, and the final <code>select</code> follows the connectors, casts every column to its PC Target type and carries the <a class="term" data-term="flag">flags</a>.</p>
   <div class="tabs-group">
     <div class="tabs" role="tablist">
-      <button role="tab" aria-controls="tab-sql" type="button">models/staging/stg_orders.sql</button>
-      <button role="tab" aria-controls="tab-yml" type="button">models/staging/sources.yml</button>
+      <button role="tab" aria-controls="tab-sql" type="button">models/m_fl_js_staging_full/stg_orders.sql</button>
+      <button role="tab" aria-controls="tab-yml" type="button">models/sources.yml</button>
     </div>
-    <div class="tab-panel" id="tab-sql" role="tabpanel">
-<pre class="code plain"><span class="cm">-- Generated from mapping m_FL_JS_STAGING_FULL, PC Target STG_ORDERS</span>
-<span class="cm">-- Path: RAW_ORDERS → SQ_RAW_ORDERS → EXP_ORDERS → SRT_ORDERS → STG_ORDERS</span>
-
-with sq_raw_orders as (
-    <span class="cm">-- Source Qualifier SQ_RAW_ORDERS (XML L161–180): no override, no filter</span>
-    select id, customer, ordered_at, store_id, subtotal, tax_paid, order_total
-    from {{ source('raw', 'raw_orders') }}
-),
-
-exp_orders as (
-    <span class="cm">-- Expression EXP_ORDERS (XML L106–125)</span>
-    select
-        id                            as order_id,
-        customer                      as customer_id,
-        store_id                      as location_id,
-        date_trunc('day', ordered_at) as ordered_at_day,
-        subtotal / 100                as subtotal,
-        tax_paid / 100                as tax_paid,
-        order_total / 100             as order_total,
-        subtotal                      as subtotal_cents,
-        tax_paid                      as tax_paid_cents,
-        order_total                   as order_total_cents
-    from sq_raw_orders
-)
-
-<span class="cm">-- Sorter SRT_ORDERS (XML L513–533) dropped: row order has no meaning in a table.</span>
-
-select
-    order_id,
-    customer_id,
-    location_id,
-    ordered_at_day,
-    subtotal          as subtotal_cents,     <span class="flagtxt">-- FLAG: dollars into a *_CENTS column (XML L608)</span>
-    tax_paid          as tax_paid_cents,     <span class="flagtxt">-- FLAG: XML L609</span>
-    order_total       as order_total_cents,  <span class="flagtxt">-- FLAG: XML L610</span>
-    subtotal_cents    as subtotal,           <span class="flagtxt">-- FLAG: cents into a dollar column (XML L611)</span>
-    tax_paid_cents    as tax_paid,           <span class="flagtxt">-- FLAG: XML L612</span>
-    order_total_cents as order_total         <span class="flagtxt">-- FLAG: XML L613</span>
-from exp_orders</pre>
-    </div>
-    <div class="tab-panel" id="tab-yml" role="tabpanel">
-<pre class="code plain">version: 2
-
-sources:
-  - name: raw                 <span class="cm"># from PC Source OWNERNAME="RAW" (XML L26)</span>
-    schema: raw
-    tables:
-      - name: raw_orders      <span class="cm"># from PC Source NAME="RAW_ORDERS" (XML L26)</span>
-        columns:
-          - name: id
-          - name: customer
-          - name: ordered_at
-          - name: store_id
-          - name: subtotal
-          - name: tax_paid
-          - name: order_total</pre>
-    </div>
+    <div class="tab-panel" id="tab-sql" role="tabpanel"><pre class="code plain" id="out-sql"></pre></div>
+    <div class="tab-panel" id="tab-yml" role="tabpanel"><pre class="code plain" id="out-yml"></pre></div>
   </div>
-  <p class="small muted">The folder name <code>staging/</code> is a placeholder; folder layout is still open.</p>
+  <p class="small muted" id="flag-count"></p>
 
   <h3>Does it run? One real row</h3>
-  <p>We ran the SQL above in DuckDB on jaffle-shop's seed data, next to the reference model. Both return 61,948 rows. Here is the first order:</p>
+  <p id="row-lead"></p>
   <div class="table-wrap">
     <table class="data">
-      <thead><tr><th>Column</th><th>raw_orders.csv</th><th>Our stg_orders</th><th>Reference stg_orders</th></tr></thead>
-      <tbody>
-        <tr><td>order_id</td><td class="mono">9bed808a-…</td><td class="mono">9bed808a-…</td><td class="mono">9bed808a-…</td></tr>
-        <tr><td>ordered_at_day</td><td class="mono">2024-09-01T15:01:00</td><td class="mono">2024-09-01 00:00</td><td class="mono">2024-09-01 00:00 <span class="muted">(named ordered_at)</span></td></tr>
-        <tr class="flagged"><td>subtotal_cents</td><td class="mono">subtotal = 700</td><td class="mono">7.0</td><td class="mono">700</td></tr>
-        <tr class="flagged"><td>tax_paid_cents</td><td class="mono">tax_paid = 42</td><td class="mono">0.42</td><td class="mono">42</td></tr>
-        <tr class="flagged"><td>order_total_cents</td><td class="mono">order_total = 742</td><td class="mono">7.42</td><td class="mono">742</td></tr>
-        <tr class="flagged"><td>subtotal</td><td></td><td class="mono">700</td><td class="mono">7.00</td></tr>
-        <tr class="flagged"><td>tax_paid</td><td></td><td class="mono">42</td><td class="mono">0.42</td></tr>
-        <tr class="flagged"><td>order_total</td><td></td><td class="mono">742</td><td class="mono">7.42</td></tr>
-      </tbody>
+      <thead><tr><th>Column</th><th>raw_orders.csv</th><th>Our stg_orders</th><th>jaffle-shop stg_orders</th></tr></thead>
+      <tbody id="row-body"></tbody>
     </table>
   </div>
-  <div class="callout open">
-    <p><b>Two lessons for check 3 (matching the reference):</b></p>
-    <p>1. A faithful converter will <em>not</em> match the reference on these 6 columns. That's expected, so the comparison has to know about flags.<br>
-    2. Column names differ too: <code>ordered_at_day</code> here (from the PC Target) and <code>ordered_at</code> in jaffle-shop. The comparison needs a column-name map.</p>
+  <p class="small muted">Highlighted rows carry a flag. Read across: our <code>subtotal_cents</code> holds the dollars (7, rounded by its type) and our <code>subtotal</code> holds the cents (700), the other way round from jaffle-shop.</p>
+  <div class="callout decision">
+    <p><b>Matching the reference.</b> A faithful copy can't match jaffle-shop on the crossed columns, and the names differ (<code>ordered_at_day</code> here, <code>ordered_at</code> there). So the check reads <code>tests/reference/expected_differences.yml</code>, which gives every known difference its reason, and fails on any difference without one (decision Q19).</p>
+    <p id="staging-summary"></p>
+    <p><a href="results.html">All three mappings, box by box, next to the SQL each box became: the Results page →</a></p>
   </div>
 
-  <p style="margin-top:28px"><a href="steps.html">Next: how the converter gets from the XML to this SQL, in five steps →</a></p>
-  <footer class="page-foot">Data: <code>assets/example-data.js</code>, generated from the XML. Row check run on 2026-11-21 against jaffle-shop seeds in DuckDB.</footer>
+  <!-- ============ 5. history ============ -->
+  <h2 id="history">5 · What this page said before the build</h2>
+  <p>Section 4 was hand-written on 21 Nov 2026, before any converter code existed, to show the SQL we expected. Building the converter settled several things differently. Section 4 now shows the generated files, and a test (<code>tests/test_docs_fresh.py</code>) fails if the page and <code>out/</code> ever disagree.</p>
+  <div class="history">
+    <div class="hist-item">
+      <h3>ORDERED_AT_DAY <a class="L">L110</a></h3>
+      <div class="io">
+        <div><h4>Before the build</h4><pre class="code plain">date_trunc('day', ordered_at)</pre></div>
+        <div><h4>Now</h4><pre class="code plain">strptime(strftime(…, '%d-%m-%y'), '%d-%m-%y')</pre></div>
+      </div>
+      <p class="small">Decision Q16: copy the XML's round trip through text, and flag that the two-digit year makes DuckDB guess the century. On this seed both give the same day, so the column still matches jaffle-shop.</p>
+    </div>
+    <div class="hist-item flagged">
+      <h3>tax_paid_cents, first order</h3>
+      <div class="io">
+        <div><h4>Before the build</h4><pre class="code plain">0.42</pre></div>
+        <div><h4>Now</h4><pre class="code plain">0</pre></div>
+      </div>
+      <p class="small">Decision Q11: the final select casts to the PC Target's type, <code>NUMBER(15,0)</code> <a class="L">L73</a>, so the dollars are rounded when written, as the original table would store them.</p>
+    </div>
+    <div class="hist-item flagged">
+      <h3>subtotal_cents, first order</h3>
+      <div class="io">
+        <div><h4>Before the build</h4><pre class="code plain">7.0</pre></div>
+        <div><h4>Now</h4><pre class="code plain">7</pre></div>
+      </div>
+      <p class="small">The same cast. <code>order_total_cents</code> is <code>NUMBER(12,2)</code>, so it keeps 7.42.</p>
+    </div>
+    <div class="hist-item">
+      <h3>Column references</h3>
+      <div class="io">
+        <div><h4>Before the build</h4><pre class="code plain">subtotal / 100</pre></div>
+        <div><h4>Now</h4><pre class="code plain">sq_raw_orders.subtotal / 100</pre></div>
+      </div>
+      <p class="small">Decided in step 2: a bare name can mean the input or an output with the same name. DuckDB picks the input, but that is DuckDB's rule; a qualified name means one thing in any database.</p>
+    </div>
+    <div class="hist-item">
+      <h3>Flags on stg_orders</h3>
+      <div class="io">
+        <div><h4>Before the build</h4><p>6, all crossed connectors</p></div>
+        <div><h4>Now</h4><p>12: 6 crossed, 5 rounding, 1 century</p></div>
+      </div>
+      <p class="small">The rounding and century flags came with decisions Q11 and Q16.</p>
+    </div>
+    <div class="hist-item">
+      <h3>Folder</h3>
+      <div class="io">
+        <div><h4>Before the build</h4><pre class="code plain">models/staging/ (a placeholder)</pre></div>
+        <div><h4>Now</h4><pre class="code plain">models/m_fl_js_staging_full/</pre></div>
+      </div>
+      <p class="small">Decision Q8: one folder per mapping.</p>
+    </div>
+    <div class="hist-item">
+      <h3>sources.yml</h3>
+      <div class="io">
+        <div><h4>Before the build</h4><p>column names only</p></div>
+        <div><h4>Now</h4><p>names, data types and the PC Source's XML lines</p></div>
+      </div>
+      <p class="small">The types come from the PC Source, so dbt and the reader see what the XML declares.</p>
+    </div>
+    <div class="hist-item">
+      <h3>Conversion report</h3>
+      <div class="io">
+        <div><h4>Before the build</h4><p>format still open</p></div>
+        <div><h4>Now</h4><p><code>out/flags.md</code>: Flags, Not converted, Left out</p></div>
+      </div>
+      <p class="small">Decisions Q10, Q17 and Q18.</p>
+    </div>
+    <div class="hist-item">
+      <h3>Matching the reference</h3>
+      <div class="io">
+        <div><h4>Before the build</h4><p>two lessons: the check must know about flags, and must map column names</p></div>
+        <div><h4>Now</h4><p>an expected-differences list with a reason for each difference</p></div>
+      </div>
+      <p class="small">Decision Q19. The staging result is in section 4; all three mappings are on the <a href="results.html">Results page</a>.</p>
+    </div>
+  </div>
+  <p class="small muted">The hand-written version is in git history, in the first commit (630db46).</p>
+
+  <p style="margin-top:28px"><a href="steps.html">Next: how the converter gets from the XML to this SQL, in five steps →</a><br><a href="results.html">Or see all three mappings, box by box, on the Results page →</a></p>
+  <footer class="page-foot">Data: <code>assets/example-data.js</code>, generated from the XML, and <code>assets/example-output.js</code>, generated from <code>out/</code> and the last <code>pytest -m reference</code> run.</footer>
 </main>
 
 <script>
@@ -196,13 +219,13 @@ sources:
       sql: "The first CTE: select the 7 columns from the dbt source." },
     EXP_ORDERS: { kind: "Expression transformation", term: "expression-tx",
       what: "Renames 3 columns, keeps only the day of ORDERED_AT, divides the 3 money columns by 100, and also keeps the raw cent values. Its input ports end in _IN; connectors L647–649 feed them from SUBTOTAL, TAX_PAID and ORDER_TOTAL.",
-      sql: "A CTE with one column per output port: renames, date_trunc, and / 100." },
+      sql: "A CTE with one column per output port: renames, the date's round trip through text (TO_CHAR, then TO_DATE), and / 100. Each input is read with the step's name, as in sq_raw_orders.subtotal." },
     SRT_ORDERS: { kind: "Sorter", term: "sorter",
       what: "Sorts the rows by ORDER_ID, the only port with ISSORTKEY=YES. Distinct is NO, so no rows are removed.",
-      sql: "Nothing. Row order has no meaning in a table, so the converter drops it and leaves a comment." },
+      sql: "Nothing. Row order has no meaning in a table, so the converter drops it and leaves a comment (decision Q12). A Sorter is kept only where a later step reads the previous row, as the order counter in the core marts does." },
     STG_ORDERS: { kind: "PC Target", term: "pc-target",
       what: "The table this path writes, with 10 columns. Look at the incoming connectors: in 6 of them the names don't match.",
-      sql: "The final select. The model file is stg_orders.sql." }
+      sql: "The final select. Each column is cast to this table's column type, which is where dollars in a NUMBER(15,0) cents column get rounded. The model file is m_fl_js_staging_full/stg_orders.sql." }
   };
 
   var path = document.getElementById("path");
@@ -311,6 +334,61 @@ sources:
   bx.addEventListener("click", function () { bx.setAttribute("aria-pressed", "true"); bn.setAttribute("aria-pressed", "false"); drawSwap("xml"); });
   bn.addEventListener("click", function () { bn.setAttribute("aria-pressed", "true"); bx.setAttribute("aria-pressed", "false"); drawSwap("name"); });
   drawSwap("xml");
+
+  /* ---------- section 4: the generated files ---------- */
+  var O = window.EXAMPLE_OUTPUT;
+  document.getElementById("out-path").textContent = O.sql_path;
+  function addLine(pre, line) {
+    var m = line.match(/^(.*?)(\s*--.*)$/);
+    if (/^\s*--/.test(line)) pre.appendChild(h("span", line, "cm"));
+    else if (m) { pre.appendChild(document.createTextNode(m[1])); pre.appendChild(h("span", m[2], /FLAG/.test(m[2]) ? "flagtxt" : "cm")); }
+    else pre.appendChild(document.createTextNode(line));
+    pre.appendChild(document.createTextNode("\n"));
+  }
+  var sqlPre = document.getElementById("out-sql");
+  O.sql.replace(/\n$/, "").split("\n").forEach(function (l) { addLine(sqlPre, l); });
+  var ymlPre = document.getElementById("out-yml");
+  O.sources_head.replace(/\n$/, "").split("\n").forEach(function (l) { ymlPre.appendChild(document.createTextNode(l + "\n")); });
+  if (O.tables_before.length) ymlPre.appendChild(h("span", "      # … " + O.tables_before.join(", ") + " (left out here)\n", "cm"));
+  O.sources.replace(/\n$/, "").split("\n").forEach(function (l) { ymlPre.appendChild(document.createTextNode(l + "\n")); });
+  if (O.tables_after.length) ymlPre.appendChild(h("span", "      # … " + O.tables_after.join(", ") + " (left out here)\n", "cm"));
+
+  /* flags per output column, read from the generated SQL's FLAG comments */
+  var flagsOf = {}, kinds = {};
+  O.sql.split("\n").forEach(function (l) {
+    var m = l.match(/ as (\w+),?\s+--(.*)$/);
+    if (!m) return;
+    var ks = []; m[2].replace(/FLAG (\w+)/g, function (_, k) { ks.push(k); kinds[k] = (kinds[k] || 0) + 1; });
+    if (ks.length) flagsOf[m[1]] = ks;
+  });
+  var total = 0, parts = [];
+  Object.keys(kinds).forEach(function (k) { total += kinds[k]; parts.push(kinds[k] + " " + k); });
+  document.getElementById("flag-count").textContent = total + " flags in this file (" + parts.join(", ") + "). Each also has a line in out/flags.md.";
+
+  /* one real row */
+  var R = O.row;
+  function num(n) { return Number(n).toLocaleString("en"); }
+  document.getElementById("row-lead").textContent = "Built with dbt on DuckDB from jaffle-shop's seed data, next to jaffle-shop's own stg_orders. Ours has " +
+    num(R.rows.ours) + " rows and jaffle-shop's " + num(R.rows.reference) + ". Here is the first order in raw_orders.csv:";
+  function short(v) { return v != null && v.length > 20 ? v.slice(0, 8) + "-…" : v; }
+  var body = document.getElementById("row-body");
+  Object.keys(R.ours).forEach(function (col) {
+    var chain = E.lineage[col.toUpperCase()] || [];
+    var src = chain.length ? chain[chain.length - 1].text.split(".")[1].toLowerCase() : null;
+    var refCol = col in R.reference ? col : (col === "ordered_at_day" ? "ordered_at" : null);
+    var tr = h("tr", null, flagsOf[col] ? "flagged" : "");
+    tr.appendChild(h("td", col + (flagsOf[col] ? "  (" + flagsOf[col].join(", ") + ")" : "")));
+    tr.appendChild(h("td", src ? src + " = " + short(R.raw[src]) : "", "mono"));
+    tr.appendChild(h("td", short(R.ours[col]), "mono"));
+    var td = h("td", refCol ? short(R.reference[refCol]) : "", "mono");
+    if (refCol && refCol !== col) td.appendChild(h("span", " (named " + refCol + ")", "muted"));
+    tr.appendChild(td);
+    body.appendChild(tr);
+  });
+  var S = O.staging_summary;
+  document.getElementById("staging-summary").textContent = "For the staging mapping the last run gave: " + S.matched + " columns match, " + S.explained +
+    " differ for a listed reason, 0 unexplained, and " + S["not compared"] + " have no twin to compare with.";
+  Site.linkLines(document);
 })();
 </script>
 </body>

@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="assets/site.css">
 <script src="assets/glossary-data.js"></script>
 <script src="assets/example-data.js"></script>
+<script src="assets/example-output.js"></script>
 <script src="assets/site.js"></script>
 </head>
 <body>
@@ -26,12 +27,12 @@
     <button type="button" id="next">Next →</button>
   </div>
 
-  <footer class="page-foot">Step content uses <code>assets/example-data.js</code>, generated from the XML, so every line number is real.</footer>
+  <footer class="page-foot">Step content uses <code>assets/example-data.js</code>, generated from the XML, so every line number is real, and <code>assets/example-output.js</code>, the converter's own output.</footer>
 </main>
 
 <script>
 (function () {
-  var E = window.EXAMPLE;
+  var E = window.EXAMPLE, O = window.EXAMPLE_OUTPUT;
   var byId = {};
   E.nodes.forEach(function (n) { byId[n.id] = n; });
 
@@ -80,6 +81,22 @@
     t.appendChild(tb); wrap.appendChild(t);
     return wrap;
   }
+  /* The generated SQL line that writes `alias`, inside a CTE (not the final select's cast), without its comment. */
+  function sqlFor(alias) {
+    var re = new RegExp(" as " + alias + ",?(\\s|$)");
+    var line = O.sql.split("\n").filter(function (l) { return re.test(l) && !/^\s*cast\(/.test(l); })[0] || "";
+    return line.replace(/\s+--.*$/, "").replace(/,\s*$/, "").trim();
+  }
+  /* Every FLAG comment in the generated stg_orders.sql, as "kind Lnnn: text". */
+  function sqlFlags() {
+    var out = [];
+    O.sql.split("\n").forEach(function (l) {
+      var c = l.indexOf("-- FLAG");
+      if (c < 0) return;
+      l.slice(c + 3).split("; FLAG ").forEach(function (f) { out.push(f.replace(/^FLAG /, "")); });
+    });
+    return out;
+  }
   function pathFlow(labels, hotLast) {
     var f = h("div", null, "flow tight");
     E.nodes.forEach(function (n, i) {
@@ -105,9 +122,9 @@
                 "Connector  SQ_RAW_ORDERS.SUBTOTAL\n" +
                 "        →  EXP_ORDERS.SUBTOTAL_IN")
         ));
-        box.appendChild(table(["", "Keep", "Skip for now"], [
+        box.appendChild(table(["", "Keep", "Skip"], [
           ["What", "PC Sources, PC Targets, transformations, ports, port expressions, instances, connectors", "tracing level, cache sizes, reject files, partitions, workflow variables"],
-          ["Settings that change results", "SQL override, filter, join condition and type, distinct, sort keys, group-by ports", "connection names (they only say where, not what)"]
+          ["Settings that change results", "SQL override, filter, join condition and type, distinct, sort keys with their case and NULL settings, group-by ports, mapping variables ($$RUN_DATE)", "connection names (they only say where, not what)"]
         ]));
         box.appendChild(watch([
           "Connectors name instances, not tables. RAW_PRODUCTS1 (L577) is a second instance of RAW_PRODUCTS, so the parser has to map it back.",
@@ -168,44 +185,49 @@
           ["SQ_RAW_ORDERS", "Source Qualifier", "CTE sq_raw_orders: select the 7 columns. No override or filter (L169, L171)"],
           ["EXP_ORDERS", "Expression", "CTE exp_orders: one '<expression> as <port>' per output port"],
           ["SRT_ORDERS", "Sorter", "dropped with a comment: Distinct is NO (L527) and nothing after it depends on order"],
-          ["STG_ORDERS", "PC Target", "final select: one column per incoming connector, named after the target column"]
+          ["STG_ORDERS", "PC Target", "final select: one column per incoming connector, named after the target column and cast to its type"]
         ]));
         box.appendChild(h("h3", "Port expressions on this path"));
         box.appendChild(table(["XML", "Informatica", "SQL", ""], [
-          ["L107", "ID", "id as order_id", "pass-through (a rename)"],
-          ["L111", "SUBTOTAL_IN/100", "subtotal / 100", "SUBTOTAL_IN is the port fed by SQ_RAW_ORDERS.SUBTOTAL (L647)"],
-          ["L110", "TO_DATE(TO_CHAR(ORDERED_AT, 'DD-MM-YY'), 'DD-MM-YY')", "date_trunc('day', ordered_at)", "keeps the day. The round trip uses a 2-digit year, so the century has to be guessed back: only equal while that guess is right"]
+          ["L107", "ID", sqlFor("order_id"), "pass-through (a rename). Every input is read with its step's name."],
+          ["L111", "SUBTOTAL_IN/100", sqlFor("subtotal"), "SUBTOTAL_IN is the port fed by SQ_RAW_ORDERS.SUBTOTAL (L647)"],
+          ["L110", "TO_DATE(TO_CHAR(ORDERED_AT, 'DD-MM-YY'), 'DD-MM-YY')", sqlFor("ordered_at_day"), "the same round trip through text (decision Q16). It keeps the day, but the 2-digit year makes DuckDB guess the century back, so it carries a century flag."]
         ]));
-        box.appendChild(h("h3", "Flags raised (" + E.flags.length + ")"));
+        var fl = sqlFlags();
+        box.appendChild(h("h3", "Flags in the generated stg_orders.sql (" + fl.length + ")"));
         var ul = h("ul");
-        E.flags.forEach(function (f) {
+        fl.forEach(function (f) {
           var li = h("li");
-          li.appendChild(Site.textWithLines("STG_ORDERS." + f.column + " is fed by " + f.from + " (L" + f.n + ")"));
+          li.appendChild(Site.textWithLines(f));
           ul.appendChild(li);
         });
         box.appendChild(ul);
         box.appendChild(watch([
-          "This path needs only 3 kinds of expression. The whole file has 119 logic expressions (IIF, ISNULL, SUM, MAX, ...). That's where most of the translation work is."
+          "This path needs only 3 kinds of expression. The whole file has 119 logic expressions (IIF, ISNULL, SUM, MAX, ...). That's where most of the translation work was. All of them convert; the Results page shows every box next to its SQL."
         ]));
       } },
     { title: "Write", term: "write",
       what: "Write one model file per PC Target, a sources.yml for the PC Sources it reads, and the flags.",
       build: function (box) {
         box.appendChild(plain(
-          "models/\n" +
-          "  staging/\n" +
-          "    sources.yml          raw_orders (and the other raw tables)\n" +
-          "    stg_orders.sql       this example\n" +
-          "    stg_*.sql            5 more from the same mapping\n" +
-          "conversion report       the 6 flags for stg_orders (format still open)"));
+          "out/\n" +
+          "  dbt_project.yml\n" +
+          "  flags.md                    the report: Flags, Not converted, Left out\n" +
+          "  models/\n" +
+          "    sources.yml               the 6 raw tables\n" +
+          "    m_fl_js_staging_full/\n" +
+          "      stg_orders.sql          this example\n" +
+          "      stg_*.sql               5 more from the same mapping\n" +
+          "    m_fl_js_marts_core/       5 models\n" +
+          "    m_fl_js_marts_enriched/   5 models"));
         var p = h("p");
-        var a = h("a", "See the full stg_orders.sql and sources.yml →");
+        var a = h("a", "See the generated stg_orders.sql and sources.yml →");
         a.href = "example.html#output";
         p.appendChild(a);
         box.appendChild(p);
         box.appendChild(watch([
-          "When a mart mapping later reads STG_ORDERS as a PC Source, it must become ref('stg_orders'), not a second source. Otherwise dbt can't work out the build order.",
-          "Folder names, the report format and data tests (schema.yml) are still open."
+          "When a mart mapping reads STG_ORDERS as a PC Source, it becomes ref('stg_orders'), not a second source, so dbt works out the build order (decision Q5). sources.yml lists only the tables no mapping writes.",
+          "Settled: one folder per mapping (decision Q8) and the flags report (Q10). Not written: dbt data tests. The raw PC Sources declare 5 primary keys and 4 foreign keys (L11–41) that could become tests; the README lists this under what isn't handled."
         ]));
       } }
   ];

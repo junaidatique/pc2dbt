@@ -29,6 +29,14 @@ class ExpressionError(Exception):
     pass
 
 
+class UnknownPort(KeyError):
+    """The expression names a port the box doesn't have."""
+
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.name = name
+
+
 # ---------------------------------------------------------------- tokens
 
 TOKEN = re.compile(r"""
@@ -153,7 +161,9 @@ class Parser:
                 return Expr("null", "null")
             if upper in ("TRUE", "FALSE"):
                 return Expr(upper.lower(), "boolean")
-            sym = self.symbols[upper]  # KeyError: the expression uses a port we don't have
+            if upper not in self.symbols:
+                raise UnknownPort(value)
+            sym = self.symbols[upper]
             return Expr(sym.sql, sym.pc_type)
         raise ExpressionError(f"unexpected {value!r}")
 

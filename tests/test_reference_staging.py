@@ -4,8 +4,10 @@ Slow and needs external/ (demo XML and the jaffle-shop clone), so it only runs w
     pytest -m reference
 Every difference must be explained in tests/reference/expected_differences.yml.
 """
+import csv
 import json
 
+import duckdb
 import pytest
 
 from tests.helpers import DEMO_XML, ROOT
@@ -15,6 +17,7 @@ pytestmark = [pytest.mark.reference,
               pytest.mark.skipif(not (DEMO_XML.exists() and harness.JAFFLE.exists()), reason="needs external/ clones")]
 
 RESULTS = ROOT / "tests" / "reference" / "results" / "staging.json"
+EXAMPLE_ROW = ROOT / "tests" / "reference" / "results" / "example_row.json"
 
 
 @pytest.fixture(scope="module")
@@ -47,3 +50,26 @@ def test_every_difference_from_jaffle_shop_is_explained(built):
     problems += [(t["table"], "rows", t["rows"]["status"]) for t in results["tables"]
                  if t["rows"]["status"] not in ("matched", "explained")]
     assert problems == []
+
+
+def one_row(db, table: str, key: str, value: str) -> dict:
+    con = duckdb.connect(str(db), read_only=True)
+    cur = con.execute(f"select * from main.{table} where {key} = ?", [value])
+    names = [d[0] for d in cur.description]
+    rows = cur.fetchall()
+    assert len(rows) == 1
+    return {n: (None if v is None else str(v)) for n, v in zip(names, rows[0])}
+
+
+def test_the_example_page_row_comes_from_both_builds(built):
+    """Writes the row docs/example.html shows: the first order in raw_orders.csv, from our stg_orders and
+    from jaffle-shop's. tools/docs/build_example_output.py puts it on the page."""
+    ours, reference = built
+    with open(harness.SEEDS / "raw_orders.csv", newline="") as f:
+        raw = next(csv.DictReader(f))
+    row = {"raw": raw, "ours": one_row(ours.db, "stg_orders", "order_id", raw["id"]),
+           "reference": one_row(reference.db, "stg_orders", "order_id", raw["id"]),
+           "rows": {"ours": harness.row_counts(ours.db, "main")["stg_orders"],
+                    "reference": harness.row_counts(reference.db, "main")["stg_orders"]}}
+    EXAMPLE_ROW.write_text(json.dumps(row, indent=2) + "\n")
+    assert row["ours"]["subtotal"] == row["raw"]["subtotal"]  # cents land in the dollar column (L611)

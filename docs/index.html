@@ -16,7 +16,11 @@
 
 <main>
   <h1>PowerCenter → dbt converter</h1>
-  <p class="lead">PowerCenter saves a data pipeline as an XML drawing of boxes and wires. dbt does the same job with plain SQL files. We are building a tool that reads the XML and writes the SQL.</p>
+  <p class="lead">PowerCenter saves a data pipeline as an XML drawing of boxes and wires. dbt does the same job with plain SQL files. We built a tool, <code>pc2dbt</code>, that reads the XML and writes the SQL.</p>
+  <div class="callout decision" id="status">
+    <p><b>Where it stands (22 Nov 2026, after step 4).</b> All 3 mappings convert into 16 dbt models, and dbt builds all 16 on DuckDB from jaffle-shop's seed data. <code>out/flags.md</code> lists 79 flags, 21 left-out items and nothing that couldn't be converted. Every difference from jaffle-shop has a listed reason, and the 21 facts computed from the raw seed all agree.</p>
+    <p><a href="results.html">See every box of the three mappings next to the SQL it became, with the comparison: the Results page →</a></p>
+  </div>
 
   <figure>
     <div class="flow" role="img" aria-label="The XML file is read by the converter, which runs five steps and writes a dbt project.">
@@ -32,7 +36,7 @@
       </div>
       <div class="flow-arrow">read by</div>
       <div class="flow-node convert">
-        <span class="tag convert">What we build</span>
+        <span class="tag convert">What we built</span>
         <span class="t">Converter</span>
         <span class="s">five steps, in order</span>
         <ul class="small">
@@ -102,14 +106,14 @@
     <div class="flow tight" role="img" aria-label="Our models and the reference models both run on the same seed data in DuckDB, then the results are compared.">
       <div class="flow-node convert"><span class="t">1. Unit tests</span><span class="s">small XML piece in, expected SQL out. One per box type and function.</span></div>
       <div class="flow-arrow"></div>
-      <div class="flow-node convert"><span class="t">2. It compiles</span><span class="s"><code>dbt compile</code> passes and the SQL runs in <a class="term" data-term="duckdb">DuckDB</a>.</span></div>
+      <div class="flow-node convert"><span class="t">2. It builds</span><span class="s"><code>dbt build</code> passes and the SQL runs in <a class="term" data-term="duckdb">DuckDB</a>.</span></div>
       <div class="flow-arrow"></div>
       <div class="flow-node output"><span class="t">3. It matches</span><span class="s">run our models and the <a class="term" data-term="reference-project">reference project</a> on the same <a class="term" data-term="seed">seed</a> data, then compare rows.</span></div>
     </div>
-    <figcaption>Each check catches a different mistake: wrong translation, invalid SQL, wrong data. Check 3 only works where a reference model exists. The 5 enriched marts have none.</figcaption>
+    <figcaption>Each check catches a different mistake: wrong translation, invalid SQL, wrong data. The 5 enriched marts have no jaffle-shop model of the same name, so check 3 compares 3 of them column by column with a twin (customer_360 with customers, order_financials with orders, order_item_enriched with order_items) and checks all 5 against 21 facts computed from the raw seed. <a href="results.html">Results →</a></figcaption>
   </figure>
 
-  <h2>Decisions so far</h2>
+  <h2>The first three decisions</h2>
   <div class="callout decision">
     <p><b>D1 · Follow the connectors, not the names.</b> When the XML looks wrong, copy what it does and add a flag. Don't fix it. First case: STG_ORDERS gets dollars in its <code>*_CENTS</code> columns <a class="L">L608–613</a>. <a href="example.html#swap">See it</a>. There are 4 such places in all; <a href="input.html#problems">the input page</a> lists them.</p>
   </div>

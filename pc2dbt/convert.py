@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from .expr import Symbol, UnsupportedFunction, translate, uses_aggregate
+from .expr import ExpressionError, Symbol, UnknownPort, UnsupportedFunction, translate, uses_aggregate
 from .parse import Connector, Folder, Mapping, Transformation
 from .types import duck_type, scale_of
 
@@ -50,6 +50,15 @@ class UnsupportedElement(Exception):
     def __init__(self, what: str, line: int):
         super().__init__(f"{what} (L{line})")
         self.what, self.line = what, line
+
+
+@dataclass
+class NotConverted:
+    """A target the converter could not translate (decision Q18)."""
+    model: str
+    folder: str
+    what: str
+    line: int
 
 
 JOIN_SQL = {"Normal Join": "inner join", "Master Outer Join": "left join",
@@ -227,8 +236,19 @@ class ModelBuilder:
         self.ctes: list[str] = []
         self.params_flagged: set[str] = set()
 
-    def translate(self, text: str, symbols: dict, **kw) -> str:
-        """translate(), plus $$ mapping parameters as dbt vars (decision Q15)."""
+    def translate(self, text: str, symbols: dict, at: tuple[str, int] | None = None, **kw) -> str:
+        """translate(), plus $$ mapping parameters as dbt vars (decision Q15). With `at` = (where, line),
+        anything it can't translate becomes an UnsupportedElement naming that place (decision Q18)."""
+        if at is not None:
+            where, line = at
+            try:
+                return self.translate(text, symbols, **kw)
+            except UnsupportedFunction as e:
+                raise UnsupportedElement(f"{where}: {e.name}", line) from None
+            except UnknownPort as e:
+                raise UnsupportedElement(f"{where}: unknown port {e.name}", line) from None
+            except ExpressionError as e:
+                raise UnsupportedElement(f"{where}: cannot read the expression ({e})", line) from None
         params = {}
         for name in {n.upper() for n in re.findall(r"\$\$\w+", text)}:
             v = self.g.m.variables.get(name)
@@ -344,10 +364,7 @@ class ModelBuilder:
 
     def port_sql(self, instance: str, p, symbols: dict, notes: list[str]) -> str:
         same: list[str] = []
-        try:
-            sql = self.translate(p.expression, symbols, self_compares=same)
-        except UnsupportedFunction as e:
-            raise UnsupportedElement(f"{instance}.{p.name}: {e.name}", p.line) from None
+        sql = self.translate(p.expression, symbols, at=(f"{instance}.{p.name}", p.line), self_compares=same)
         if same:
             notes.append(self.flag("self_compare", p.line,
                                    f"{p.name} compares {', '.join(dict.fromkeys(same))} with itself: the variables it reads "
@@ -442,10 +459,8 @@ class ModelBuilder:
             if not uses_aggregate(p.expression):
                 raise UnsupportedElement(f"{instance}.{p.name}: Aggregator port without an aggregate function "
                                          f"(PowerCenter would return the last row's value)", p.line)
-            try:
-                cols.append(column(self.translate(p.expression, symbols, aggregates=True), p.name.lower()))
-            except UnsupportedFunction as e:
-                raise UnsupportedElement(f"{instance}.{p.name}: {e.name}", p.line) from None
+            cols.append(column(self.translate(p.expression, symbols, at=(f"{instance}.{p.name}", p.line), aggregates=True),
+                               p.name.lower()))
         body = f"    select\n{select_list(cols)}\n    from {source}"
         if group:
             body += "\n    group by " + ", ".join(symbols[p.name].sql for p in group)
@@ -461,7 +476,7 @@ class ModelBuilder:
         source = one_source(refs, instance, t.line)
         text = t.attr("Filter Condition").strip() or "TRUE"
         line = t.attributes.get("Filter Condition", ("", t.line))[1]
-        cond = self.translate(text, symbols)
+        cond = self.translate(text, symbols, at=(f"{instance} filter condition", line))
         cols = [column(symbols[p.name].sql, p.name.lower()) for p in self.needed_ports(t, instance)]
         body = (f"    select\n{select_list(cols)}\n    from {source}\n    where coalesce({cond}, false)"
                 f"  -- {' '.join(text.split())} (L{line}); a row whose condition is NULL is dropped, as in PowerCenter")
@@ -485,7 +500,8 @@ class ModelBuilder:
             symbols[p.name] = Symbol("null" if r is None else f"{side}.{r[1]}", p.datatype)
         master = one_source(sides["master"], f"{instance} (master side)", t.line)
         detail = one_source(sides["detail"], f"{instance} (detail side)", t.line)
-        cond = self.translate(t.attr("Join Condition"), symbols)
+        cond = self.translate(t.attr("Join Condition"), symbols,
+                              at=(f"{instance} join condition", t.attributes.get("Join Condition", ("", t.line))[1]))
         cols = [column(symbols[p.name].sql, p.name.lower()) for p in self.needed_ports(t, instance)]
         flag = ""
         if jt == "Master Outer Join":
@@ -503,7 +519,8 @@ class ModelBuilder:
         source = one_source(refs.values(), instance, t.line)
         symbols = {n: Symbol(qualified(r), inputs[n].datatype) for n, r in refs.items()}
         wanted = set(self.needed.get(instance, []))
-        conditions = [(g, self.translate(g.expression.strip(), symbols)) for g in sorted(t.groups, key=lambda g: g.order)
+        conditions = [(g, self.translate(g.expression.strip(), symbols, at=(f"{instance} group {g.name}", g.line)))
+                      for g in sorted(t.groups, key=lambda g: g.order)
                       if g.group_type == "OUTPUT"]
         ctes = []
         for g in sorted(t.groups, key=lambda g: g.order):
@@ -619,6 +636,32 @@ class ModelBuilder:
 
 
 def convert_mapping(folder: Folder, mapping_name: str) -> list[Model]:
+    """Every target as a model; stops on the first thing it can't translate (used by the tests)."""
     graph = MappingGraph(folder, folder.mappings[mapping_name])
     targets = [i.name for i in graph.m.instances.values() if i.type == "TARGET"]
     return [ModelBuilder(graph, t).build() for t in targets]
+
+
+def convert_mapping_keep_going(folder: Folder, mapping_name: str) -> tuple[list[Model], list[NotConverted]]:
+    """Every target as a model, converting all it can (decision Q18). A target that can't be translated
+    becomes a model that makes dbt stop on it, naming the element and its XML line."""
+    graph = MappingGraph(folder, folder.mappings[mapping_name])
+    models, failed = [], []
+    for inst in (i for i in graph.m.instances.values() if i.type == "TARGET"):
+        try:
+            models.append(ModelBuilder(graph, inst.name).build())
+        except UnsupportedElement as e:
+            failed.append(NotConverted(inst.definition.lower(), mapping_name.lower(), e.what, e.line))
+        except Exception as e:  # a converter bug: still report it and convert the rest
+            failed.append(NotConverted(inst.definition.lower(), mapping_name.lower(),
+                                       f"{inst.name}: converter error {type(e).__name__}: {e}", inst.line))
+        else:
+            continue
+        n = failed[-1]
+        message = (f"pc2dbt could not convert {n.model} (mapping {mapping_name}): {n.what} (L{n.line})"
+                   .replace("\\", "/").replace('"', "'").replace("{", "(").replace("}", ")"))
+        sql = ("-- pc2dbt could not convert this model (decision Q18). dbt stops on it with the reason below; "
+               "see flags.md.\n"
+               f'{{% if execute %}}{{{{ exceptions.raise_compiler_error("{message}") }}}}{{% endif %}}\n')
+        models.append(Model(n.model, n.folder, inst.definition, sql, [], []))
+    return models, failed

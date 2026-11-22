@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .convert import Flag, Model, convert_mapping, lines, written_tables
+from .convert import Flag, Model, NotConverted, convert_mapping_keep_going, lines, written_tables
 from .parse import Folder, parse_file
 from .types import duck_type
 
@@ -22,7 +22,11 @@ class Report:
     models: list[Model]
     flags: list[tuple[str, Flag]]          # (model name, flag)
     left_out: list[LeftOut]
-    exit_code: int = 0
+    not_converted: list[NotConverted] = field(default_factory=list)
+
+    @property
+    def exit_code(self) -> int:
+        return 1 if self.not_converted else 0
 
 
 def project_name(folder: Folder) -> str:
@@ -88,7 +92,10 @@ def flags_md(xml_name: str, report: Report) -> str:
             out += [f"### {model.folder}/{model.name}", ""]
             out += [f"- **{f.kind}** L{f.line}: {f.message}" for f in sorted(mine, key=lambda f: (f.line, f.kind))]
             out.append("")
-    out += ["## Left out", ""]
+    out += ["## Not converted", ""]
+    out += [f"- L{n.line}: {n.what}. Model {n.folder}/{n.model}: dbt stops on it with this message (decision Q18)."
+            for n in report.not_converted] or ["Nothing."]
+    out += ["", "## Left out", ""]
     out += [f"- L{i.line}: {i.what}. Why: {i.why}." for i in report.left_out] or ["Nothing."]
     return "\n".join(out) + "\n"
 
@@ -98,9 +105,12 @@ def write_project(xml_path, out_dir, mappings: list[str] | None = None) -> Repor
     folder = parse_file(xml_path)
     names = mappings or list(folder.mappings)
     models: list[Model] = []
+    failed: list[NotConverted] = []
     for name in names:
-        models.extend(convert_mapping(folder, name))
-    report = Report(models, [(m.name, f) for m in models for f in m.flags], left_out_items(folder, names))
+        converted, not_converted = convert_mapping_keep_going(folder, name)
+        models += converted
+        failed += not_converted
+    report = Report(models, [(m.name, f) for m in models for f in m.flags], left_out_items(folder, names), failed)
 
     name = project_name(folder)
     (out / "models").mkdir(parents=True, exist_ok=True)

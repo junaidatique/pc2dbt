@@ -87,6 +87,8 @@ for line in open(transcript, encoding="utf-8"):
     c = d.get("message", {}).get("content")
     if not isinstance(c, str) or c.startswith("This session is being continued"):
         continue
+    if c.lstrip().startswith(("<task-notification>", "<agent-message")):
+        continue  # automated notices (a background task finished, a subagent reported), not my prompts
     m = re.search(r"<bash-input>(.*?)</bash-input>", c, re.S)
     user_msgs.append(f"`{m.group(1).strip()}`" if m else c)
 

@@ -1,0 +1,39 @@
+{
+  "raw": {
+    "id": "9bed808a-5074-4dfb-b1eb-388e2e60a6da",
+    "customer": "50a2d1c4-d788-4498-a6f7-dd75d4db588f",
+    "ordered_at": "2024-09-01T15:01:00",
+    "store_id": "4b6c2304-2b9e-41e4-942a-cf11a1819378",
+    "subtotal": "700",
+    "tax_paid": "42",
+    "order_total": "742"
+  },
+  "ours": {
+    "order_id": "9bed808a-5074-4dfb-b1eb-388e2e60a6da",
+    "customer_id": "50a2d1c4-d788-4498-a6f7-dd75d4db588f",
+    "location_id": "4b6c2304-2b9e-41e4-942a-cf11a1819378",
+    "ordered_at_day": "2024-09-01 00:00:00",
+    "subtotal_cents": "7",
+    "tax_paid_cents": "0",
+    "order_total_cents": "7.42",
+    "subtotal": "700",
+    "tax_paid": "42",
+    "order_total": "742.00"
+  },
+  "reference": {
+    "order_id": "9bed808a-5074-4dfb-b1eb-388e2e60a6da",
+    "location_id": "4b6c2304-2b9e-41e4-942a-cf11a1819378",
+    "customer_id": "50a2d1c4-d788-4498-a6f7-dd75d4db588f",
+    "subtotal_cents": "700",
+    "tax_paid_cents": "42",
+    "order_total_cents": "742",
+    "subtotal": "7.00",
+    "tax_paid": "0.42",
+    "order_total": "7.42",
+    "ordered_at": "2024-09-01 00:00:00"
+  },
+  "rows": {
+    "ours": 61948,
+    "reference": 61948
+  }
+}

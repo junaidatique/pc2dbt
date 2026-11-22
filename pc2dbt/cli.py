@@ -18,6 +18,10 @@ def main(argv: list[str] | None = None) -> int:
 
     report = write_project(args.xml, args.out, args.mapping)
     print(f"Wrote {len(report.models)} models with {len(report.flags)} flags to {args.out} (see flags.md).")
+    for n in report.not_converted:  # decision Q18: say what was not converted, and exit with an error
+        print(f"not converted: {n.folder}/{n.model}: {n.what} (L{n.line})", file=sys.stderr)
+    if report.not_converted:
+        print(f"{len(report.not_converted)} model(s) could not be converted; dbt will stop on them.", file=sys.stderr)
     return report.exit_code
 
 
