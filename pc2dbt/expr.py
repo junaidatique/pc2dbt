@@ -73,13 +73,16 @@ BINARY = {"OR": 1, "AND": 2,
           "||": 6, "+": 7, "-": 7, "*": 8, "/": 8, "%": 8}
 COMPARISON = {"=", "<>", "!=", "^=", "<", "<=", ">", ">="}
 NUMERIC = {"decimal", "double", "integer", "small integer", "bigint", "real"}
+# Aggregate functions: same NULL rules as SQL (NULLs skipped; all-NULL gives NULL; COUNT(*) counts rows).
+AGGREGATES = {"COUNT", "SUM", "MIN", "MAX"}
 
 
 class Parser:
-    def __init__(self, text: str, symbols: dict[str, Symbol]):
+    def __init__(self, text: str, symbols: dict[str, Symbol], aggregates: bool = False):
         self.tokens = tokenize(text)
         self.i = 0
         self.symbols = {k.upper(): v for k, v in symbols.items()}
+        self.aggregates = aggregates
 
     def peek(self):
         return self.tokens[self.i]
@@ -133,6 +136,8 @@ class Parser:
             upper = value.upper()
             if self.peek()[1] == "(":
                 self.take("(")
+                if upper in AGGREGATES:
+                    return self.aggregate(upper)
                 args = []
                 if self.peek()[1] != ")":
                     args.append(self.expression(0))
@@ -148,6 +153,19 @@ class Parser:
             sym = self.symbols[upper]  # KeyError: the expression uses a port we don't have
             return Expr(sym.sql, sym.pc_type)
         raise ExpressionError(f"unexpected {value!r}")
+
+
+    def aggregate(self, name: str) -> Expr:
+        """COUNT(*) / COUNT(x) / SUM(x) / MIN(x) / MAX(x); only inside an Aggregator."""
+        if not self.aggregates:
+            raise UnsupportedFunction(name)
+        if name == "COUNT" and self.peek()[1] == "*":
+            self.take("*")
+            self.take(")")
+            return Expr("count(*)", "decimal")
+        arg = self.expression(0)
+        self.take(")")
+        return Expr(f"{name.lower()}({arg.sql})", "decimal" if name == "COUNT" else arg.pc_type)
 
 
 def binary(op: str, a: Expr, b: Expr) -> Expr:
@@ -208,5 +226,10 @@ def function(name: str, args: list[Expr]) -> Expr:
     raise UnsupportedFunction(name)
 
 
-def translate(text: str, symbols: dict[str, Symbol]) -> str:
-    return Parser(text, symbols).parse().sql
+def translate(text: str, symbols: dict[str, Symbol], aggregates: bool = False) -> str:
+    return Parser(text, symbols, aggregates).parse().sql
+
+
+def uses_aggregate(text: str) -> bool:
+    toks = tokenize(text)
+    return any(k == "name" and v.upper() in AGGREGATES and toks[i + 1][1] == "(" for i, (k, v) in enumerate(toks[:-1]))

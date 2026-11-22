@@ -244,6 +244,7 @@ Nothing found.
 - `dbt build` passes on DuckDB, and the row counts match the seed data.
 - Check 3, in `tests/reference`, compares with jaffle-shop at `7d0d8de`: 23 columns match, 8 differ for listed reasons, 0 are unexplained, and 4 have no twin.
 - Added a small Results page, and moved the docs generator scripts into `tools/docs/`. Nothing in step 1 is committed yet.
+- Time: step 1 took 22 minutes of agent time (16:08 to 16:30 UTC), against the 1 h estimate.
 
 **What the agent got wrong**
 
@@ -254,6 +255,67 @@ Nothing found.
 | The comparison harness looked for columns in a per-database information_schema, which DuckDB doesn't have. | Agent | The reference test failed. | It now reads the shared information_schema, filtered by database. |
 | flags.md listed six session helper tasks as workflow command tasks. | Agent | Read the generated flags.md. | Added a test; only the workflow's own tasks are listed now. |
 | The Results page scrolled sideways on narrow screens. | Agent | Browser check at phone width. | The code columns can now shrink. |
+
+### Prompt 10: Step 1 reviewed, one question, and build step 2 (core marts)
+
+21 Nov 2026, 18:02 · typed
+
+**My prompt**
+
+> Okay, I went through the step one. I also ran the test myself, and unit test and comparison test, and all pass. The generated model, this is what I wanted. Every step is named after its box with its XML lines. The swap shows a flag on each line, and the drop sorters say why. Uh, I can explain every line of it. So for the comparison, I like that listed difference that stops appearing also fails. So the lists stay honest. There are zero differences. It's fine. The union correction, good catch. This is really good. It uses the field pairs, not positions. I am glad it's in the log. 25 minutes against the estimated of an hour. Keep recording the time per step in the log. Okay, I have one more question. In exp_orders, you have subtotal divided by 100 as subtotal, and a few lines below subtotal as subtotal_cents. The same name is both an input and output. How do we know the second line reads the raw cents, not the new dollars? I checked the in DuckDB and it reads the input, so the output is right, but we are relying on our DuckDB naming rule. Either pin it with a test or use the XML input port name subtotal_in, so there is no ambiguity. Tell me which you pick and why. And you can go ahead with your commit message. For the step 2, this is where main traps are. First, the counter copied as one sequence all rows in the sorter's order, including its case and null settings. And the second one is the master outer joins, where 483 records with no items drop out of orders. The amount that come out 100 times too small. When it's done, stop and show the SQL step for exp_customer_order_num, the SQL step for jnr_customer_orders, the comparison results, the test result, the commit message, and don't commit again. Same condition. Don't commit and first show me. I will verify, and then you can commit.
+
+**Answer, in short**
+
+- Committed step 1 as `7e6ed3e`, with the message you approved and the same 45 files.
+- Same name as input and output: I picked neither option exactly. Every column is now read with the name of the step it comes from (`sq_raw_orders.subtotal`), which can never mean an output, in any database.
+- Why not the `_in` names: the target select has the same problem (`cast(subtotal_cents …) as subtotal` three lines after `… as subtotal_cents`), and there the input ports are the target's own column names, so XML input names can't help.
+- Why not only a test: a test would pin DuckDB's rule, not the SQL. A new test now parses every generated select with DuckDB's parser and fails on any column read without its step's name.
+- Built step 2 (core marts) test-first: the Aggregator, `ref()` between mappings, a flag on every Master Outer Join naming the side it keeps, and the counter.
+- The counter's Sorter is kept as a step that numbers the rows (sort keys, case ignored, NULLs first). The counter itself is one running number over all rows that never restarts per customer and goes back to 1 on a NULL customer.
+- A second hand-made fixture covers the new box types, and the real core mapping runs on hand-made staging rows with hand-worked results.
+- Check 3 for the marts: 31 columns match, 11 differ for listed reasons, 0 are unexplained, and 11 have no twin. ORDERS has 61,465 rows; the 483 orders with no items are listed as explained missing rows.
+- Order amounts are exactly 100 times too small and customer lifetime amounts exactly 100 times too big, both from the staging swap. The counter equals jaffle-shop's per-customer number on 190 of 61,465 rows by chance.
+- The docs don't settle how PowerCenter groups NULL keys in an Aggregator. The converter uses SQL's rule (one NULL group); the seed has no NULL keys, and the README will say so.
+- Time: step 2 took 25 minutes of agent time (18:02 to 18:27 UTC), against the 1 h 15 min estimate.
+
+**What the agent got wrong**
+
+| What went wrong | Caught by | How it was caught | What changed |
+|---|---|---|---|
+| Told you step 1 took 25 minutes; the transcript shows 22 (16:08:34 to 16:30:48 UTC). | Agent | Read the timestamps from the saved conversation. | The log records 22 minutes. |
+| Step 1's SQL read bare column names where a step also writes an output with that name (EXP_ORDERS, and the stg_orders target select). It was right only because of DuckDB's naming rule. | You | You asked how we know the second line reads the raw cents. | Every column is read with its step's name; a test parses every select and fails on bare names. |
+| The rounding flags trusted a port's declared scale, so a computed decimal the target rounds was not flagged: ORDER_TOTAL_CENTS/100 at L3785 (0.0742 becomes 0.07), and the same case in staging at L610. | Agent | Checked the generated ORDERS SQL against the hand-worked values. | Flags follow the value back to the port that computes it, and a division counts as a double; test added. |
+| A fixture test looked up `NAME="SRT_VISITS"`, which matches two lines. | Agent | The test failed on the lookup. | The lookup names the transformation line. |
+| The first "needs a Sorter" test changed only the box's instance type, which would not remove the Sorter. | Agent | Read the test back before running it. | The test rewires the two connectors instead. |
+
+### Prompt 11: Step 2 reviewed, the 190 rows, NULL groups, and two step 3 questions
+
+22 Nov 2026, 07:52 · typed
+
+**My prompt**
+
+> I went through the step 2 and ran the test myself on 93 test and 6 references test pass. My question, for my question, your answer is really good. Putting the step name on every column is better than both of my options, and I like that you found the same problem in the final select. The test that failed on all 7 models first is exactly what I wanted. For the counter, I checked the lines 3588 to 3589, and you are right about those. The number never restarts. The sort settings are all there. For the joins, thank you for pointing out the 483 orders drop at GNR underscore orders underscore items underscore AGG. I had to join mixed up. One correction, I think so, from my side. Please check it on your end as well. The 190 matching rows are not by chance. All 190 belong to the first customer in sort order who has 190 orders. So for them, the running numbers equals the per customer number. Fix the reason in the expected differences list and log it as caught by me. For the empty group keys, keep SQL rule that they form one group, add a test that pins it and list it in the readme as an unknown uncertainty. For the commit, you it is approved once the 190 reason is fixed. Step 3, for step 3, I have 2 questions. Give me your recommendation for each and wait for my decision before building. Right now, any expression with variable ports is treated as the counter in the enriched mapping. Most variable ports only clean up values in the rows. Only the counter and the first customer flag depend on row order. How will you handle that? There is no Jaffer Dash shop version of the enriched tables. How will we know the output is right? The test for the steps 3 should show the first customer flag is always 0. So unique underscore customer is always 0. If you check line 2004, I am talking about that one, and the value band compare cents with 50. I check the seed. Every order that reaches it has at least 416 cents. So all of them should land in high value. For line 3104 becomes a DPT variable that is run underscore date. For order financials 1, writes the order financials table at line 2391. The extra location rows are dropped before any table. Please check this and let me know what you think.
+
+**Answer, in short**
+
+- You were right about the 190 rows: all of them belong to the first customer in sort order (`0000bd8e…`), who has 190 orders numbered 1 to 190, the same as a per-customer count; no other row matches. The reason in `expected_differences.yml` now says so.
+- NULL group keys: kept SQL's rule (one group) and added a test on the hand-made fixture that pins it. Changing the SQL to drop NULL keys gives 2 rows instead of 3, so the test would catch it.
+- Started `README.md` with an Unknowns section; the NULL group rule is its first entry.
+- Committed step 2 with the 190 fix, the NULL group test and the README start (message and files in the reply).
+- Checked your step 3 facts on the seed. All 61,465 orders that reach the value band have 416 to 10,494 cents, so all are HIGH_VALUE. UNIQUE_CUSTOMERS is SUM(IS_FIRST_CUSTOMER) (L2004). `$$RUN_DATE` defaults to 12/31/2025 (L3104). ORDER_FINANCIALS1 writes ORDER_FINANCIALS (L2391). Both sets of extra location rows are dropped before any table.
+- One refinement: PowerCenter evaluates inputs, then variable ports top to bottom, then outputs. By that order only 1 of the 29 variable ports in the enriched mapping reads a previous row: the counter (L1706). The first-customer flag compares each value with itself, because L2124-2126 overwrite the "previous" values before L2127 reads them, so it doesn't depend on row order at all: 0 on every row, 1 only where location, day or customer is NULL.
+- Step 3 question 1, recommendation: decide by port order, not by the presence of variables. A variable that reads only inputs or variables above it is inlined into the outputs; one that reads itself or a variable below it must match the counter pattern or the model fails (Q13, Q18), and only then is its Sorter kept.
+- Step 3 question 2, recommendation: three checks: hand-made rows with hand-worked results through the real enriched mapping; facts computed straight from the seed in the test (row counts, unique customers 0, all orders HIGH_VALUE, recency from the run date, only the 2 stores with orders); and a comparison with core marts or jaffle-shop wherever an enriched column has a twin.
+- Waiting for your decisions before building step 3.
+- Time: 6 minutes for the fixes and checks (07:52 to 07:58 UTC).
+
+**What the agent got wrong**
+
+| What went wrong | Caught by | How it was caught | What changed |
+|---|---|---|---|
+| Said the counter matched jaffle-shop on 190 rows "by chance". All 190 are the first customer in sort order, whose 190 orders are numbered 1 to 190 either way. | You | You checked which customer the rows belong to; a query confirmed it. | The reason in `expected_differences.yml` is fixed. |
+| A first script marked output ports as reading the previous row's variable values, judging by their place in the XML. Outputs are evaluated after all variable ports, so they read this row's values. | Agent | Checked the script's output against PowerCenter's evaluation order. | Only variable-to-variable reads count; nothing was built on the wrong list. |
+| A first read of L3104 showed `$$RUN_DATE` without its default, because the display filter removed DEFAULTVALUE. | Agent | The Things to watch list says L3104 has a default. | Read the line again with that attribute: 12/31/2025 00:00:00. |
 
 ## Part 2: Things to watch
 
@@ -275,7 +337,7 @@ Status: **open** means not decided or not done, **decided** means we agreed what
 | Truncate target = NO (L919), but every target has a `TRUNCATE` Pre SQL (L541). | Each run is a full reload, so every model is a table rebuilt on every run (Q9). | decided |
 | Some target columns have no decimals (L73, L1087). | We cast to the target column types and flag where that rounds. Rounding happens only at the targets, not inside the mapping, because high precision is off (Q11). | decided |
 | The per-customer order counter never restarts (L3588–3589, L1705–1706), and the first-customer flag is always 0 (L2124–2127). | We copy these two patterns and flag them; any other row-by-row pattern fails clearly (Q13). | decided |
-| All 10 Master Outer joins keep the lookup side (for example L3651). | We copy them (D1). That drops the 483 orders with no items from ORDERS and ORDER_FINANCIALS (61,465 rows, not 61,948). The extra rows they create on the seed data (4 stores with no orders) never reach a table. | decided |
+| All 10 Master Outer joins keep the lookup side (for example L3651). | We copy them and flag each one with the side it keeps (D1). That drops the 483 orders with no items from ORDERS (61,465 rows, checked in step 2) and ORDER_FINANCIALS. The extra rows they create on the seed data (4 stores with no orders) never reach a table. | decided |
 | Two ports drop rows with an empty input (L235, L455). | A faithful copy drops those rows too (D1). | decided |
 | The target instance `ORDER_FINANCIALS1` writes the table `ORDER_FINANCIALS` (L2391). | Model names come from the table, not the instance. | decided |
 | `$$RUN_DATE` defaults to 12/31/2025 (L3104) and drives recency. | A dbt variable with the same default, plus a flag that the parameter file at L4554 could override it (Q15). | decided |
@@ -296,6 +358,8 @@ Status: **open** means not decided or not done, **decided** means we agreed what
 | A failed step doesn't stop the workflow (L4622–4625, L793). | Out of scope; the README says so (Q17). | decided |
 | Supply cost passes through a whole-number port (L3382). | Not rounded inside the mapping, because high precision is off (Advanced Workflow Guide). One Designer Guide table disagrees; noted on the input page. | decided |
 | The counter's Sorters ignore case and place NULLs differently (L1654, L3567, L3571, L1658). | The copy follows these settings and flags them (Q12, Q13). | decided |
+| How PowerCenter groups NULL keys in an Aggregator. | The docs found don't settle it. We keep SQL's rule (all NULLs form one group), a test pins it, and README.md lists it under Unknowns (prompt 11). | handled |
+| A name that a step both reads and writes was resolved by DuckDB's rule. | Every column is now read with its step's name, and a test checks every generated select. | handled |
 | Another XML may contain boxes or functions the converter doesn't know. | Everything else is converted; the unknown model fails at dbt compile with the element name and its line, is listed in the report, and the converter exits with an error (Q18). | decided |
 | The scripts that generate the docs data lived in a temporary folder. | Moved into `tools/docs/` in build step 1. | handled |
 

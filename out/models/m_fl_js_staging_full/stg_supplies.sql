@@ -5,29 +5,29 @@ with
 -- SQ_RAW_SUPPLIES · Source Qualifier · L213–230 · reads RAW_SUPPLIES (L6–12)
 sq_raw_supplies as (
     select
-        id,
-        name,
-        cost,
-        perishable,
-        sku
-    from {{ source('raw', 'raw_supplies') }}
+        raw_supplies.id,
+        raw_supplies.name,
+        raw_supplies.cost,
+        raw_supplies.perishable,
+        raw_supplies.sku
+    from {{ source('raw', 'raw_supplies') }} as raw_supplies
 ),
 
 -- SQ_RAW_PRODUCTS1 · Source Qualifier · L461–478 · reads RAW_PRODUCTS (L19–25)
 sq_raw_products1 as (
     select
-        sku
-    from {{ source('raw', 'raw_products') }}
+        raw_products.sku
+    from {{ source('raw', 'raw_products') }} as raw_products
 ),
 
 -- JNR_SUPPLIES_PRODUCTS · Joiner · L479–498 · Normal Join
 jnr_supplies_products as (
     select
-        detail.id as id,
-        detail.name as name,
-        detail.cost as cost,
-        detail.perishable as perishable,
-        detail.sku as sku
+        detail.id,
+        detail.name,
+        detail.cost,
+        detail.perishable,
+        detail.sku
     from sq_raw_supplies as detail
     inner join sq_raw_products1 as master
         on master.sku = detail.sku
@@ -36,20 +36,20 @@ jnr_supplies_products as (
 -- EXP_SUPPLIES · Expression · L499–512
 exp_supplies as (
     select
-        id as supply_id,
-        name as supply_name,
-        cost as supply_cost_cents,
-        cost / 100 as supply_cost,
-        case when (perishable = 'Y' or perishable = '1') then 1 else 0 end as is_perishable,
-        sku as product_id
+        jnr_supplies_products.id as supply_id,
+        jnr_supplies_products.name as supply_name,
+        jnr_supplies_products.cost as supply_cost_cents,
+        jnr_supplies_products.cost / 100 as supply_cost,
+        case when (jnr_supplies_products.perishable = 'Y' or jnr_supplies_products.perishable = '1') then 1 else 0 end as is_perishable,
+        jnr_supplies_products.sku as product_id
     from jnr_supplies_products
 )
 
 select
-    cast(supply_id as varchar) as supply_id,
-    cast(supply_name as varchar) as supply_name,
-    cast(supply_cost_cents as decimal(12,2)) as supply_cost_cents,  -- FLAG rounds L628: SUPPLY_COST_CENTS (double) is rounded to 2 decimal places by the target column SUPPLY_COST_CENTS decimal(12,2) (decision Q11)
-    cast(supply_cost as decimal(12,2)) as supply_cost,  -- FLAG rounds L627: SUPPLY_COST (double) is rounded to 2 decimal places by the target column SUPPLY_COST decimal(12,2) (decision Q11)
-    cast(is_perishable as decimal(1,0)) as is_perishable,
-    cast(product_id as varchar) as product_id
+    cast(exp_supplies.supply_id as varchar) as supply_id,
+    cast(exp_supplies.supply_name as varchar) as supply_name,
+    cast(exp_supplies.supply_cost_cents as decimal(12,2)) as supply_cost_cents,  -- FLAG rounds L628: SUPPLY_COST_CENTS (double) is rounded to 2 decimal places by the target column SUPPLY_COST_CENTS decimal(12,2) (decision Q11)
+    cast(exp_supplies.supply_cost as decimal(12,2)) as supply_cost,  -- FLAG rounds L627: SUPPLY_COST is computed as COST/100 (L503), a double at run time because high precision is off, and is rounded to 2 decimal places by the target column SUPPLY_COST decimal(12,2) (decision Q11)
+    cast(exp_supplies.is_perishable as decimal(1,0)) as is_perishable,
+    cast(exp_supplies.product_id as varchar) as product_id
 from exp_supplies

@@ -86,3 +86,39 @@ def test_unknown_function_names_itself():
 def test_unknown_port_is_an_error():
     with pytest.raises(KeyError):
         translate("MISSING + 1", {})
+
+
+# ---------------------------------------------------------------- aggregates (Aggregator boxes only)
+
+def aggregate(expr: str, values: list) -> object:
+    """Translate an Aggregator expression and run it over a one-column table of `values`."""
+    sql = translate(expr, {"AMOUNT": Symbol("amount", "decimal")}, aggregates=True)
+    con = duckdb.connect()
+    con.execute("create table t (amount decimal(8,2))")
+    con.executemany("insert into t values (?)", [[v] for v in values])
+    return con.execute(f"select {sql} from t").fetchone()[0]
+
+
+AMOUNTS = [Decimal("5.50"), None, Decimal("2.00")]
+
+
+@pytest.mark.parametrize("expr, want", [
+    ("COUNT(*)", 3),                      # every row
+    ("COUNT(AMOUNT)", 2),                 # NULLs are not counted
+    ("SUM(AMOUNT)", Decimal("7.50")),     # NULLs are skipped
+    ("MIN(AMOUNT)", Decimal("2.00")),
+    ("MAX(AMOUNT)", Decimal("5.50")),
+    ("SUM(IIF(ISNULL(AMOUNT), 0, AMOUNT))", Decimal("7.50")),
+])
+def test_aggregate_functions(expr, want):
+    assert aggregate(expr, AMOUNTS) == want
+
+
+def test_sum_of_only_nulls_is_null():
+    assert aggregate("SUM(AMOUNT)", [None, None]) is None
+
+
+def test_aggregate_outside_an_aggregator_is_not_translated():
+    with pytest.raises(UnsupportedFunction) as e:
+        translate("SUM(AMOUNT)", {"AMOUNT": Symbol("amount", "decimal")})
+    assert e.value.name == "SUM"

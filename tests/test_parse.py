@@ -47,3 +47,13 @@ def test_credential_line_is_never_read():
     valuepairs = list(folder.root.iter("VALUEPAIR"))
     assert len(valuepairs) == 1
     assert valuepairs[0].attrs == {}
+
+
+def test_sort_keys_and_group_by_ports_are_read():
+    from tests.helpers import MINI_MARTS_XML
+    m = parse_file(MINI_MARTS_XML).mappings["m_MINI_MARTS"]
+    srt = m.transformations["SRT_VISITS"].ports
+    assert [(p.name, p.sort_direction) for p in srt.values() if p.sort_key] == [
+        ("PERSON", "ASCENDING"), ("VISITED_AT", "ASCENDING"), ("VISIT_ID", "ASCENDING")]  # in port order
+    agg = m.transformations["AGG_BY_STORE"].ports
+    assert [p.name for p in agg.values() if p.expression_type == "GROUPBY"] == ["STORE"]

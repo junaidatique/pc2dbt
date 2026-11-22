@@ -1,0 +1,462 @@
+{
+  "reference": "dbt-labs/jaffle-shop @ 7d0d8de",
+  "summary": {
+    "matched": 31,
+    "explained": 11,
+    "not compared": 11
+  },
+  "tables": [
+    {
+      "table": "customers",
+      "key": [
+        "customer_id"
+      ],
+      "rows": {
+        "ours": 935,
+        "reference": 935,
+        "only_ours": 0,
+        "only_reference": 0,
+        "reason": "",
+        "status": "matched"
+      },
+      "columns": [
+        {
+          "ours": "customer_id",
+          "reference": "customer_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "customer_name",
+          "reference": "customer_name",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "lifetime_orders",
+          "reference": "count_lifetime_orders",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "first_order_date",
+          "reference": "first_ordered_at",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "last_order_date",
+          "reference": "last_ordered_at",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "lifetime_spend",
+          "reference": "lifetime_spend",
+          "status": "explained",
+          "differing_rows": 935,
+          "reason": "100 times jaffle-shop's: AGG_ORDERS_BY_CUSTOMER sums ORDER_TOTAL (L3636), which holds cents because of the staging swap at L613 (decision D1)."
+        },
+        {
+          "ours": "lifetime_spend_pretax",
+          "reference": "lifetime_spend_pretax",
+          "status": "explained",
+          "differing_rows": 935,
+          "reason": "100 times jaffle-shop's: it sums SUBTOTAL (L3637), which holds cents because of the staging swap at L611 (decision D1)."
+        },
+        {
+          "ours": "lifetime_tax_paid",
+          "reference": "lifetime_tax_paid",
+          "status": "explained",
+          "differing_rows": 935,
+          "reason": "100 times jaffle-shop's: it sums TAX_PAID (L3638), which holds cents because of the staging swap at L612 (decision D1)."
+        },
+        {
+          "ours": "customer_type",
+          "reference": "customer_type",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        }
+      ]
+    },
+    {
+      "table": "orders",
+      "key": [
+        "order_id"
+      ],
+      "rows": {
+        "ours": 61465,
+        "reference": 61948,
+        "only_ours": 0,
+        "only_reference": 483,
+        "reason": "The 483 orders with no items. JNR_ORDERS_ITEMS_AGG (L3519) is a Master Outer Join: it keeps every per-order item total (detail) and drops orders with no match (decision D1).",
+        "status": "explained"
+      },
+      "columns": [
+        {
+          "ours": "order_id",
+          "reference": "order_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "customer_id",
+          "reference": "customer_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "location_id",
+          "reference": "location_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "ordered_at_day",
+          "reference": "ordered_at",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "subtotal",
+          "reference": "subtotal",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "100 times too small: SUBTOTAL_RECAL = SUBTOTAL_CENTS/100 (L3534), but stg_orders.subtotal_cents holds dollars because of the swap at L608 (decision D1)."
+        },
+        {
+          "ours": "tax_paid",
+          "reference": "tax_paid",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "100 times too small and without its cents: TAX_PAID_RECAL = TAX_PAID_CENTS/100 (L3535) divides whole dollars (swap at L609, rounded by NUMBER(15,0) in staging)."
+        },
+        {
+          "ours": "order_total",
+          "reference": "order_total",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "100 times too small: ORDER_TOTAL_RECAL = ORDER_TOTAL_CENTS/100 (L3536) divides dollars (swap at L610); the NUMBER(12,2) column then rounds it to 2 places (L3785, decision Q11)."
+        },
+        {
+          "ours": "order_items_subtotal",
+          "reference": "order_items_subtotal",
+          "status": "explained",
+          "differing_rows": 61465,
+          "reason": "100 times jaffle-shop's: it sums PRODUCT_PRICE (L3459), which holds cents because of the staging swap at L621 (decision D1)."
+        },
+        {
+          "ours": "order_cost",
+          "reference": "order_cost",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "has_food_items",
+          "reference": "is_food_order",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "has_drink_items",
+          "reference": "is_drink_order",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "customer_order_number",
+          "reference": "customer_order_number",
+          "status": "explained",
+          "differing_rows": 61275,
+          "reason": "Never restarts per customer: the counter (L3588-3589) numbers all 61,465 rows 1 to 61,465 by customer, day and order (decision Q13); it equals jaffle-shop's per-customer number only on the 190 rows of the first customer in that order, who has 190 orders numbered 1 to 190."
+        },
+        {
+          "ours": null,
+          "reference": "subtotal_cents",
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "jaffle-shop passes the staging cents columns through; the XML's ORDERS has none."
+        },
+        {
+          "ours": null,
+          "reference": "tax_paid_cents",
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "jaffle-shop passes the staging cents columns through; the XML's ORDERS has none."
+        },
+        {
+          "ours": null,
+          "reference": "order_total_cents",
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "jaffle-shop passes the staging cents columns through; the XML's ORDERS has none."
+        },
+        {
+          "ours": null,
+          "reference": "count_food_items",
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "jaffle-shop counts items; the XML's ORDERS keeps only the 1/0 flags."
+        },
+        {
+          "ours": null,
+          "reference": "count_drink_items",
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "jaffle-shop counts items; the XML's ORDERS keeps only the 1/0 flags."
+        },
+        {
+          "ours": null,
+          "reference": "count_order_items",
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "jaffle-shop counts items; ITEMS_COUNT (L3458) is not connected to ORDERS."
+        }
+      ]
+    },
+    {
+      "table": "order_items",
+      "key": [
+        "order_item_id"
+      ],
+      "rows": {
+        "ours": 90900,
+        "reference": 90900,
+        "only_ours": 0,
+        "only_reference": 0,
+        "reason": "",
+        "status": "matched"
+      },
+      "columns": [
+        {
+          "ours": "order_item_id",
+          "reference": "order_item_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "order_id",
+          "reference": "order_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "product_id",
+          "reference": "product_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "ordered_at_day",
+          "reference": "ordered_at",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "product_name",
+          "reference": "product_name",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "product_type",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "jaffle-shop's order_items has no product type."
+        },
+        {
+          "ours": "product_price",
+          "reference": "product_price",
+          "status": "explained",
+          "differing_rows": 90900,
+          "reason": "100 times jaffle-shop's: it comes from stg_products.product_price, which holds cents because of the swap at L621 (decision D1)."
+        },
+        {
+          "ours": "is_food_item",
+          "reference": "is_food_item",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "is_drink_item",
+          "reference": "is_drink_item",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "supply_cost_per_product",
+          "reference": "supply_cost",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "has_perishable_supply",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "jaffle-shop's order_items has no perishable flag."
+        }
+      ]
+    },
+    {
+      "table": "products",
+      "key": [
+        "product_id"
+      ],
+      "rows": {
+        "ours": 10,
+        "reference": 10,
+        "only_ours": 0,
+        "only_reference": 0,
+        "reason": "",
+        "status": "matched"
+      },
+      "columns": [
+        {
+          "ours": "product_id",
+          "reference": "product_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "product_name",
+          "reference": "product_name",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "product_type",
+          "reference": "product_type",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "product_price_cents",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "Swap at L620, passed through: holds dollars rounded to whole dollars; jaffle-shop has no cents column."
+        },
+        {
+          "ours": "product_price",
+          "reference": "product_price",
+          "status": "explained",
+          "differing_rows": 10,
+          "reason": "Swap at L621, passed through from staging: holds cents (decision D1)."
+        },
+        {
+          "ours": "product_description",
+          "reference": "product_description",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "is_food_item",
+          "reference": "is_food_item",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "is_drink_item",
+          "reference": "is_drink_item",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        }
+      ]
+    },
+    {
+      "table": "supplies",
+      "key": [
+        "supply_id",
+        "product_id"
+      ],
+      "rows": {
+        "ours": 65,
+        "reference": 65,
+        "only_ours": 0,
+        "only_reference": 0,
+        "reason": "",
+        "status": "matched"
+      },
+      "columns": [
+        {
+          "ours": "supply_id",
+          "reference": "supply_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "supply_name",
+          "reference": "supply_name",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "supply_cost_cents",
+          "reference": null,
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "jaffle-shop has no cents column."
+        },
+        {
+          "ours": "supply_cost",
+          "reference": "supply_cost",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": "is_perishable",
+          "reference": "is_perishable_supply",
+          "status": "explained",
+          "differing_rows": 30,
+          "reason": "Passed through from staging: the rule at L504 never matches the seed's True/False (decision Q14), so every supply is 0."
+        },
+        {
+          "ours": "product_id",
+          "reference": "product_id",
+          "status": "matched",
+          "differing_rows": 0,
+          "reason": ""
+        },
+        {
+          "ours": null,
+          "reference": "supply_uuid",
+          "status": "not compared",
+          "differing_rows": null,
+          "reason": "jaffle-shop's surrogate key; the XML has none."
+        }
+      ]
+    }
+  ]
+}

@@ -88,6 +88,9 @@ class Port:
     line: int
     group: str = ""
     ref_field: str = ""
+    expression_type: str = ""   # GENERAL, or GROUPBY for an Aggregator's group-by port
+    sort_key: bool = False      # Sorter: this port is a sort key (keys rank in port order)
+    sort_direction: str = ""    # Sorter: ASCENDING or DESCENDING
 
     @property
     def is_input(self) -> bool:
@@ -188,7 +191,8 @@ def _transformation(node: Node) -> Transformation:
         ports[p.get("NAME")] = Port(
             p.get("NAME"), p.get("PORTTYPE", ""), p.get("DATATYPE", ""), _int(p.get("PRECISION")), _int(p.get("SCALE")),
             p.get("EXPRESSION", "") or "", p.get("DEFAULTVALUE", "") or "", p.line, p.get("GROUP", "") or "",
-            p.get("REF_FIELD", "") or "")
+            p.get("REF_FIELD", "") or "", p.get("EXPRESSIONTYPE", "") or "", p.get("ISSORTKEY") == "YES",
+            p.get("SORTDIRECTION", "") or "")
     groups = [Group(g.get("NAME"), g.get("TYPE", ""), g.get("EXPRESSION", "") or "", _int(g.get("ORDER")), g.line)
               for g in node.kids("GROUP")]
     deps = [(d.get("INPUTFIELD"), d.get("OUTPUTFIELD")) for d in node.kids("FIELDDEPENDENCY")]

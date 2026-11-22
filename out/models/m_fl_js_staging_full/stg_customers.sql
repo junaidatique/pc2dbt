@@ -5,12 +5,12 @@ with
 -- SQ_RAW_CUSTOMERS · Source Qualifier · L91–105 · reads RAW_CUSTOMERS (L40–43)
 sq_raw_customers as (
     select
-        id,
-        name
-    from {{ source('raw', 'raw_customers') }}
+        raw_customers.id,
+        raw_customers.name
+    from {{ source('raw', 'raw_customers') }} as raw_customers
 )
 
 select
-    cast(id as varchar) as customer_id,
-    cast(name as varchar) as customer_name
+    cast(sq_raw_customers.id as varchar) as customer_id,
+    cast(sq_raw_customers.name as varchar) as customer_name
 from sq_raw_customers

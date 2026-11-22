@@ -5,24 +5,24 @@ with
 -- SQ_RAW_ITEMS · Source Qualifier · L181–196 · reads RAW_ITEMS (L35–39)
 sq_raw_items as (
     select
-        id,
-        order_id,
-        sku
-    from {{ source('raw', 'raw_items') }}
+        raw_items.id,
+        raw_items.order_id,
+        raw_items.sku
+    from {{ source('raw', 'raw_items') }} as raw_items
 ),
 
 -- EXP_ORDER_ITEMS · Expression · L453–460
 exp_order_items as (
     select
-        id as order_item_id,
-        order_id,
-        sku as product_id
+        sq_raw_items.id as order_item_id,
+        sq_raw_items.order_id,
+        sq_raw_items.sku as product_id
     from sq_raw_items
-    where order_id is not null  -- FLAG error_default L455: ORDER_ID has an ERROR() default: a row with an empty ORDER_ID is skipped
+    where sq_raw_items.order_id is not null  -- FLAG error_default L455: ORDER_ID has an ERROR() default: a row with an empty ORDER_ID is skipped
 )
 
 select
-    cast(order_item_id as varchar) as order_item_id,
-    cast(order_id as varchar) as order_id,
-    cast(product_id as varchar) as product_id
+    cast(exp_order_items.order_item_id as varchar) as order_item_id,
+    cast(exp_order_items.order_id as varchar) as order_id,
+    cast(exp_order_items.product_id as varchar) as product_id
 from exp_order_items

@@ -5,42 +5,42 @@ with
 -- SQ_RAW_ORDERS · Source Qualifier · L161–180 · reads RAW_ORDERS (L26–34)
 sq_raw_orders as (
     select
-        id,
-        customer,
-        ordered_at,
-        store_id,
-        subtotal,
-        tax_paid,
-        order_total
-    from {{ source('raw', 'raw_orders') }}
+        raw_orders.id,
+        raw_orders.customer,
+        raw_orders.ordered_at,
+        raw_orders.store_id,
+        raw_orders.subtotal,
+        raw_orders.tax_paid,
+        raw_orders.order_total
+    from {{ source('raw', 'raw_orders') }} as raw_orders
 ),
 
 -- EXP_ORDERS · Expression · L106–125
 exp_orders as (
     select
-        id as order_id,
-        customer as customer_id,
-        store_id as location_id,
-        strptime(strftime(ordered_at, '%d-%m-%y'), '%d-%m-%y') as ordered_at_day,  -- FLAG century L110: two-digit year: DuckDB reads 00-68 as 20xx and 69-99 as 19xx; PowerCenter's rule may differ
-        subtotal / 100 as subtotal,
-        tax_paid / 100 as tax_paid,
-        order_total / 100 as order_total,
-        subtotal as subtotal_cents,
-        tax_paid as tax_paid_cents,
-        order_total as order_total_cents
+        sq_raw_orders.id as order_id,
+        sq_raw_orders.customer as customer_id,
+        sq_raw_orders.store_id as location_id,
+        strptime(strftime(sq_raw_orders.ordered_at, '%d-%m-%y'), '%d-%m-%y') as ordered_at_day,  -- FLAG century L110: two-digit year: DuckDB reads 00-68 as 20xx and 69-99 as 19xx; PowerCenter's rule may differ
+        sq_raw_orders.subtotal / 100 as subtotal,
+        sq_raw_orders.tax_paid / 100 as tax_paid,
+        sq_raw_orders.order_total / 100 as order_total,
+        sq_raw_orders.subtotal as subtotal_cents,
+        sq_raw_orders.tax_paid as tax_paid_cents,
+        sq_raw_orders.order_total as order_total_cents
     from sq_raw_orders
 )
 -- SRT_ORDERS · Sorter · L513–533 · dropped: row order means nothing in a table (decision Q12)
 
 select
-    cast(order_id as varchar) as order_id,
-    cast(customer_id as varchar) as customer_id,
-    cast(location_id as varchar) as location_id,
-    cast(ordered_at_day as timestamp) as ordered_at_day,
-    cast(subtotal as decimal(15,0)) as subtotal_cents,  -- FLAG crossed L608: SRT_ORDERS.SUBTOTAL goes into STG_ORDERS.SUBTOTAL_CENTS, as the connector says; FLAG rounds L608: SUBTOTAL (double) is rounded to 0 decimal places by the target column SUBTOTAL_CENTS decimal(15,0) (decision Q11)
-    cast(tax_paid as decimal(15,0)) as tax_paid_cents,  -- FLAG crossed L609: SRT_ORDERS.TAX_PAID goes into STG_ORDERS.TAX_PAID_CENTS, as the connector says; FLAG rounds L609: TAX_PAID (double) is rounded to 0 decimal places by the target column TAX_PAID_CENTS decimal(15,0) (decision Q11)
-    cast(order_total as decimal(12,2)) as order_total_cents,  -- FLAG crossed L610: SRT_ORDERS.ORDER_TOTAL goes into STG_ORDERS.ORDER_TOTAL_CENTS, as the connector says
-    cast(subtotal_cents as decimal(15,0)) as subtotal,  -- FLAG crossed L611: SRT_ORDERS.SUBTOTAL_CENTS goes into STG_ORDERS.SUBTOTAL, as the connector says; FLAG rounds L611: SUBTOTAL_CENTS (double) is rounded to 0 decimal places by the target column SUBTOTAL decimal(15,0) (decision Q11)
-    cast(tax_paid_cents as decimal(15,0)) as tax_paid,  -- FLAG crossed L612: SRT_ORDERS.TAX_PAID_CENTS goes into STG_ORDERS.TAX_PAID, as the connector says; FLAG rounds L612: TAX_PAID_CENTS (double) is rounded to 0 decimal places by the target column TAX_PAID decimal(15,0) (decision Q11)
-    cast(order_total_cents as decimal(12,2)) as order_total  -- FLAG crossed L613: SRT_ORDERS.ORDER_TOTAL_CENTS goes into STG_ORDERS.ORDER_TOTAL, as the connector says
+    cast(exp_orders.order_id as varchar) as order_id,
+    cast(exp_orders.customer_id as varchar) as customer_id,
+    cast(exp_orders.location_id as varchar) as location_id,
+    cast(exp_orders.ordered_at_day as timestamp) as ordered_at_day,
+    cast(exp_orders.subtotal as decimal(15,0)) as subtotal_cents,  -- FLAG crossed L608: SRT_ORDERS.SUBTOTAL goes into STG_ORDERS.SUBTOTAL_CENTS, as the connector says; FLAG rounds L608: SUBTOTAL is computed as SUBTOTAL_IN/100 (L111), a double at run time because high precision is off, and is rounded to 0 decimal places by the target column SUBTOTAL_CENTS decimal(15,0) (decision Q11)
+    cast(exp_orders.tax_paid as decimal(15,0)) as tax_paid_cents,  -- FLAG crossed L609: SRT_ORDERS.TAX_PAID goes into STG_ORDERS.TAX_PAID_CENTS, as the connector says; FLAG rounds L609: TAX_PAID is computed as TAX_PAID_IN/100 (L112), a double at run time because high precision is off, and is rounded to 0 decimal places by the target column TAX_PAID_CENTS decimal(15,0) (decision Q11)
+    cast(exp_orders.order_total as decimal(12,2)) as order_total_cents,  -- FLAG crossed L610: SRT_ORDERS.ORDER_TOTAL goes into STG_ORDERS.ORDER_TOTAL_CENTS, as the connector says; FLAG rounds L610: ORDER_TOTAL is computed as ORDER_TOTAL_IN/100 (L113), a double at run time because high precision is off, and is rounded to 2 decimal places by the target column ORDER_TOTAL_CENTS decimal(12,2) (decision Q11)
+    cast(exp_orders.subtotal_cents as decimal(15,0)) as subtotal,  -- FLAG crossed L611: SRT_ORDERS.SUBTOTAL_CENTS goes into STG_ORDERS.SUBTOTAL, as the connector says; FLAG rounds L611: SUBTOTAL_CENTS (double) is rounded to 0 decimal places by the target column SUBTOTAL decimal(15,0) (decision Q11)
+    cast(exp_orders.tax_paid_cents as decimal(15,0)) as tax_paid,  -- FLAG crossed L612: SRT_ORDERS.TAX_PAID_CENTS goes into STG_ORDERS.TAX_PAID, as the connector says; FLAG rounds L612: TAX_PAID_CENTS (double) is rounded to 0 decimal places by the target column TAX_PAID decimal(15,0) (decision Q11)
+    cast(exp_orders.order_total_cents as decimal(12,2)) as order_total  -- FLAG crossed L613: SRT_ORDERS.ORDER_TOTAL_CENTS goes into STG_ORDERS.ORDER_TOTAL, as the connector says
 from exp_orders

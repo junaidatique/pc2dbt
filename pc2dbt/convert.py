@@ -9,14 +9,14 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from .expr import Symbol, UnsupportedFunction, translate
+from .expr import Symbol, UnsupportedFunction, translate, uses_aggregate
 from .parse import Connector, Folder, Mapping, Transformation
 from .types import duck_type, scale_of
 
 
 @dataclass
 class Flag:
-    kind: str       # crossed, rounds, error_default, router_default, century
+    kind: str       # crossed, rounds, error_default, router_default, century, master_outer, sort_order, counter
     line: int
     message: str
 
@@ -63,6 +63,15 @@ def cte_name(instance: str) -> str:
     return instance.lower()
 
 
+def written_tables(folder: Folder) -> set[str]:
+    """Tables some mapping in this XML writes. A PC Source reading one becomes ref() (decision Q5)."""
+    return {i.definition for m in folder.mappings.values() for i in m.instances.values() if i.type == "TARGET"}
+
+
+def has_variables(t: Transformation | None) -> bool:
+    return t is not None and any(p.port_type == "LOCAL VARIABLE" for p in t.ports.values())
+
+
 class MappingGraph:
     def __init__(self, folder: Folder, mapping: Mapping):
         self.folder, self.m = folder, mapping
@@ -71,9 +80,19 @@ class MappingGraph:
         for c in mapping.connectors:
             self.into[(c.to_instance, c.to_field)] = c
             self.incoming.setdefault(c.to_instance, []).append(c)
+        self.written = written_tables(folder)
+        # A Sorter whose rows go straight into an Expression with variable ports is kept: that
+        # Expression reads rows one by one, so their order matters (decisions Q12, Q13).
+        self.kept_sorters: dict[str, str] = {}
+        for c in mapping.connectors:
+            src, dst = self.transformation(c.from_instance), self.transformation(c.to_instance)
+            if src is not None and src.type == "Sorter" and dst is not None and dst.type == "Expression" and has_variables(dst):
+                self.kept_sorters[c.from_instance] = c.to_instance
 
     def transformation(self, instance: str) -> Transformation | None:
-        inst = self.m.instances[instance]
+        inst = self.m.instances.get(instance)
+        if inst is None:
+            return None
         return self.m.transformations.get(inst.definition) if inst.type == "TRANSFORMATION" else None
 
     def upstream(self, target: str) -> list[str]:
@@ -92,16 +111,38 @@ class MappingGraph:
     def ref(self, instance: str, port: str) -> tuple[str, str]:
         """Where the value of an output port lives: (cte, column). Sorters are looked through."""
         t = self.transformation(instance)
-        if t is not None and t.type == "Sorter":
+        if t is not None and t.type == "Sorter" and instance not in self.kept_sorters:
             c = self.into[(instance, port)]
             return self.ref(c.from_instance, c.from_field)
         if t is not None and t.type == "Router":
             return f"{cte_name(instance)}__{t.ports[port].group.lower()}", port.lower()
         return cte_name(instance), port.lower()
 
+    def origin(self, instance: str, port: str):
+        """The port where a value was last computed, following pass-through ports back along connectors."""
+        t = self.transformation(instance)
+        p = t.ports.get(port) if t else None
+        if p is None:
+            return None
+        if t.type == "Router" and p.ref_field:
+            c = self.into.get((instance, p.ref_field))
+        elif p.is_input and p.is_output and p.expression.strip().upper() in ("", port.upper()):
+            c = self.into.get((instance, port))
+        else:
+            return p
+        if c is None or self.transformation(c.from_instance) is None:
+            return p
+        return self.origin(c.from_instance, c.from_field) or p
+
     def input_ref(self, instance: str, port: str):
         c = self.into.get((instance, port))
         return None if c is None else self.ref(c.from_instance, c.from_field)
+
+
+def qualified(r) -> str:
+    """A column read with the name of the step it comes from, so it can never mean an output
+    of the same select (see tests/test_sql_names.py)."""
+    return "null" if r is None else f"{r[0]}.{r[1]}"
 
 
 def one_source(refs, what: str, line: int) -> str:
@@ -112,7 +153,7 @@ def one_source(refs, what: str, line: int) -> str:
 
 
 def column(sql: str, alias: str, comment: str = "") -> str:
-    text = sql if sql == alias else f"{sql} as {alias}"
+    text = sql if sql == alias or sql.endswith(f".{alias}") else f"{sql} as {alias}"
     return text, comment
 
 
@@ -170,27 +211,35 @@ class ModelBuilder:
         cols = []
         for p in self.needed_ports(t, instance):
             c = self.g.into[(instance, p.name)]
-            cols.append(column(c.from_field.lower(), p.name.lower()))
-        body = f"    select\n{select_list(cols)}\n    from {{{{ source('{table.owner.lower()}', '{table.name.lower()}') }}}}"
-        self.add(instance, t, "Source Qualifier", [(cte_name(instance), body)], f"reads {table.name} ({lines(table.line, table.end)})")
+            cols.append(column(f"{table.name.lower()}.{c.from_field.lower()}", p.name.lower()))
+        note = f"reads {table.name} ({lines(table.line, table.end)})"
+        if table.name in self.g.written:
+            relation = f"{{{{ ref('{table.name.lower()}') }}}}"
+            note += ", which another mapping writes: ref() (decision Q5)"
+        else:
+            relation = f"{{{{ source('{table.owner.lower()}', '{table.name.lower()}') }}}}"
+        body = f"    select\n{select_list(cols)}\n    from {relation} as {table.name.lower()}"
+        self.add(instance, t, "Source Qualifier", [(cte_name(instance), body)], note)
 
     def expression(self, instance: str, t: Transformation):
-        if any(p.port_type == "LOCAL VARIABLE" for p in t.ports.values()):
-            raise UnsupportedElement(f"{instance}: Expression with variable ports", t.line)
         symbols, refs, where = {}, [], []
         for p in t.ports.values():
             if not p.is_input:
                 continue
             r = self.g.input_ref(instance, p.name)
             refs.append(r)
-            symbols[p.name] = Symbol("null" if r is None else r[1], p.datatype)
+            symbols[p.name] = Symbol(qualified(r), p.datatype)
             default = p.default.strip()
             if default.upper().startswith("ERROR(") and r is not None:
-                where.append((f"{r[1]} is not null", self.flag(
+                where.append((f"{qualified(r)} is not null", self.flag(
                     "error_default", p.line, f"{p.name} has an ERROR() default: a row with an empty {p.name} is skipped")))
             elif default and default.upper() != "NULL":
                 raise UnsupportedElement(f"{instance}.{p.name}: input port default value {default!r}", p.line)
         source = one_source(refs, instance, t.line)
+        variables = [p for p in t.ports.values() if p.port_type == "LOCAL VARIABLE"]
+        counter_note, counter_var = "", None
+        if variables:
+            counter_var, counter_note = self.counter(instance, t, variables, symbols)
         cols = []
         for p in self.needed_ports(t, instance):
             if p.is_input:
@@ -201,6 +250,8 @@ class ModelBuilder:
             except UnsupportedFunction as e:
                 raise UnsupportedElement(f"{instance}.{p.name}: {e.name}", p.line) from None
             comment = ""
+            if counter_var and re.search(rf"\b{counter_var}\b", p.expression, re.I):
+                comment = counter_note
             if re.search(r"TO_DATE\s*\(", p.expression, re.I) and TWO_DIGIT_YEAR.search(p.expression):
                 comment = self.flag("century", p.line,
                                     "two-digit year: DuckDB reads 00-68 as 20xx and 69-99 as 19xx; PowerCenter's rule may differ")
@@ -213,34 +264,133 @@ class ModelBuilder:
     def sorter(self, instance: str, t: Transformation):
         if t.attr("Distinct") == "YES":
             raise UnsupportedElement(f"{instance}: Sorter with Distinct", t.attributes["Distinct"][1])
+        if instance in self.g.kept_sorters:
+            return self.sorted_rows(instance, t)
         note = "dropped: row order means nothing in a table (decision Q12)"
         self.blocks.append(Block(instance, "Sorter", t.line, t.end, "", note))
         self.ctes.append(f"-- {instance} · Sorter · {lines(t.line, t.end)} · {note}")
+
+    def counter(self, instance: str, t: Transformation, variables, symbols: dict) -> tuple[str, str]:
+        """The one row-by-row pattern in the XML (decision Q13): v_PREV = X, then
+        v_SEQ = IIF(v_PREV = X, v_SEQ + 1, 1), evaluated in port order. Anything else stops."""
+        prev, seq = (variables + [None, None])[:2]
+        by_name = {k.upper(): v for k, v in symbols.items()}
+        x = prev.expression.strip()
+        pattern = f"IIF({prev.name}={x},{seq.name}+1,1)" if seq else ""
+        if len(variables) != 2 or x.upper() not in by_name or re.sub(r"\s+", "", seq.expression).upper() != pattern.upper():
+            raise UnsupportedElement(f"{instance}.{variables[-1].name}: variable ports in a pattern this converter does not "
+                                     f"translate (decision Q13)", variables[-1].line)
+        feeders = {c.from_instance for c in self.g.incoming.get(instance, [])}
+        srt = feeders.pop() if len(feeders) == 1 else None
+        if srt not in self.g.kept_sorters:
+            raise UnsupportedElement(f"{instance}: variable ports need a Sorter right before them, "
+                                     f"otherwise the row order is unknown", t.line)
+        pos, xs = f"{cte_name(srt)}.sort_position", by_name[x.upper()].sql
+        symbols[prev.name] = Symbol(xs, prev.datatype)  # it holds this row's X by the time it is read
+        symbols[seq.name] = Symbol(f"{pos}\n            - coalesce(max(case when {xs} is null then {pos} end) over (order by {pos}) - 1, 0)",
+                                   seq.datatype)
+        note = self.flag("counter", seq.line,
+                         f"{prev.name} is set to this row's {x} ({lines(prev.line, prev.line)}) before {seq.name} compares them, "
+                         f"so the comparison is true on every row where {x} is not NULL: one running number over all rows "
+                         f"in {srt}'s order that never restarts per {x}, back to 1 on a row whose {x} is NULL")
+        return seq.name, note
+
+    def sorted_rows(self, instance: str, t: Transformation):
+        """A Sorter kept because an Expression with variable ports reads its rows in order."""
+        consumer = self.g.kept_sorters[instance]
+        keys = [p for p in t.ports.values() if p.sort_key]
+        if not keys:
+            raise UnsupportedElement(f"{instance}: Sorter with no sort key", t.line)
+        refs = {p.name: self.g.input_ref(instance, p.name) for p in t.ports.values()}
+        source = one_source(refs.values(), instance, t.line)
+        ignore_case = t.attr("Case Sensitive") == "NO"
+        nulls_low = t.attr("Null Treated Low") == "YES"
+        order = []
+        for p in keys:
+            sql = qualified(refs[p.name])
+            if ignore_case and p.datatype.lower() in ("string", "nstring", "text", "ntext"):
+                sql = f"lower({sql})"
+            desc = p.sort_direction == "DESCENDING"
+            order.append(f"{sql} {'desc' if desc else 'asc'} nulls {'first' if nulls_low != desc else 'last'}")
+        case_line, null_line = t.attributes.get("Case Sensitive", ("", t.line))[1], t.attributes.get("Null Treated Low", ("", t.line))[1]
+        note = self.flag("sort_order", t.line,
+                         f"{instance} is kept only to put rows in order for {consumer} (decisions Q12, Q13): sort keys "
+                         f"{', '.join(p.name for p in keys)}; "
+                         + (f"case is ignored (Case Sensitive = NO, L{case_line}), so strings sort by lower(); " if ignore_case else "")
+                         + f"NULLs sort {'low' if nulls_low else 'high'} (Null Treated Low = {'YES' if nulls_low else 'NO'}, L{null_line})")
+        cols = [column(qualified(refs[p.name]), p.name.lower()) for p in self.needed_ports(t, instance)]
+        cols.append(("row_number() over (\n            order by " + ",\n                     ".join(order)
+                     + "\n        ) as sort_position", note))
+        body = f"    select\n{select_list(cols)}\n    from {source}"
+        self.add(instance, t, "Sorter", [(cte_name(instance), body)], f"kept: its order numbers the rows for {consumer} (decision Q12)")
+
+    def aggregator(self, instance: str, t: Transformation):
+        symbols, refs = {}, []
+        for p in t.ports.values():
+            if not p.is_input:
+                continue
+            r = self.g.input_ref(instance, p.name)
+            refs.append(r)
+            symbols[p.name] = Symbol(qualified(r), p.datatype)
+            if p.default.strip() and p.default.strip().upper() != "NULL":
+                raise UnsupportedElement(f"{instance}.{p.name}: input port default value {p.default.strip()!r}", p.line)
+        source = one_source(refs, instance, t.line)
+        group = [p for p in t.ports.values() if p.expression_type == "GROUPBY"]
+        for p in group:
+            if not p.is_input:
+                raise UnsupportedElement(f"{instance}.{p.name}: group-by port that is not an input", p.line)
+        cols = []
+        for p in self.needed_ports(t, instance):
+            if p.expression_type == "GROUPBY":
+                cols.append(column(symbols[p.name].sql, p.name.lower()))
+                continue
+            if not uses_aggregate(p.expression):
+                raise UnsupportedElement(f"{instance}.{p.name}: Aggregator port without an aggregate function "
+                                         f"(PowerCenter would return the last row's value)", p.line)
+            try:
+                cols.append(column(translate(p.expression, symbols, aggregates=True), p.name.lower()))
+            except UnsupportedFunction as e:
+                raise UnsupportedElement(f"{instance}.{p.name}: {e.name}", p.line) from None
+        body = f"    select\n{select_list(cols)}\n    from {source}"
+        if group:
+            body += "\n    group by " + ", ".join(symbols[p.name].sql for p in group)
+        self.add(instance, t, "Aggregator", [(cte_name(instance), body)])
 
     def joiner(self, instance: str, t: Transformation):
         jt = t.attr("Join Type")
         if jt not in JOIN_SQL:
             raise UnsupportedElement(f"{instance}: join type {jt!r}", t.line)
+        if t.attr("Case Sensitive String Comparison") == "NO":
+            raise UnsupportedElement(f"{instance}: case-insensitive join", t.attributes["Case Sensitive String Comparison"][1])
         sides = {"master": [], "detail": []}
+        boxes = {"master": set(), "detail": set()}
         symbols = {}
         for p in t.ports.values():
             side = "master" if p.is_master else "detail"
             r = self.g.input_ref(instance, p.name)
             sides[side].append(r)
+            if (instance, p.name) in self.g.into:
+                boxes[side].add(self.g.into[(instance, p.name)].from_instance)
             symbols[p.name] = Symbol("null" if r is None else f"{side}.{r[1]}", p.datatype)
         master = one_source(sides["master"], f"{instance} (master side)", t.line)
         detail = one_source(sides["detail"], f"{instance} (detail side)", t.line)
         cond = translate(t.attr("Join Condition"), symbols)
         cols = [column(symbols[p.name].sql, p.name.lower()) for p in self.needed_ports(t, instance)]
+        flag = ""
+        if jt == "Master Outer Join":
+            m_box, d_box = ", ".join(sorted(boxes["master"])), ", ".join(sorted(boxes["detail"]))
+            flag = "  -- " + self.flag("master_outer", t.attributes["Join Type"][1],
+                                      f"{instance} is a Master Outer Join: it keeps every row from {d_box} (detail) and only "
+                                      f"the rows from {m_box} (master) that match; {m_box} rows with no match are dropped")
         body = (f"    select\n{select_list(cols)}\n    from {detail} as detail\n"
-                f"    {JOIN_SQL[jt]} {master} as master\n        on {cond}")
+                f"    {JOIN_SQL[jt]} {master} as master{flag}\n        on {cond}")
         self.add(instance, t, "Joiner", [(cte_name(instance), body)], jt)
 
     def router(self, instance: str, t: Transformation):
         inputs = {p.name: p for p in t.ports.values() if p.group == "INPUT" or p.port_type == "INPUT"}
         refs = {n: self.g.input_ref(instance, n) for n in inputs}
         source = one_source(refs.values(), instance, t.line)
-        symbols = {n: Symbol(r[1] if r else "null", inputs[n].datatype) for n, r in refs.items()}
+        symbols = {n: Symbol(qualified(r), inputs[n].datatype) for n, r in refs.items()}
         wanted = set(self.needed.get(instance, []))
         conditions = [(g, translate(g.expression.strip(), symbols)) for g in sorted(t.groups, key=lambda g: g.order)
                       if g.group_type == "OUTPUT"]
@@ -275,7 +425,7 @@ class ModelBuilder:
                 inp = by_output.get(o.name, {}).get(g.name)
                 r = self.g.input_ref(instance, inp) if inp else None
                 refs.append(r)
-                cols.append(column("null" if r is None else r[1], o.name.lower()))
+                cols.append(column(qualified(r), o.name.lower()))
             src = one_source(refs, f"{instance} group {g.name}", t.line)
             branches.append(f"    -- group {g.name}\n    select\n{select_list(cols)}\n    from {src}")
         self.add(instance, t, "Union", [(cte_name(instance), "\n    union all\n".join(branches))])
@@ -299,15 +449,20 @@ class ModelBuilder:
             if c.from_field != f.name and c.from_field in names:
                 notes.append(self.flag("crossed", c.line,
                                        f"{c.from_instance}.{c.from_field} goes into {table.name}.{f.name}, as the connector says"))
-            src_t = self.g.transformation(c.from_instance)
-            src_port = src_t.ports.get(c.from_field) if src_t else None
+            src_port = self.g.origin(c.from_instance, c.from_field)
             if src_port is not None and scale_of(f.datatype, f.scale) not in (-1, None):
-                incoming, target_scale = scale_of(src_port.datatype, src_port.scale), scale_of(f.datatype, f.scale)
+                # With high precision off a computed decimal is a double at run time, so a division
+                # can carry more decimals than the port declares (decision Q11).
+                computed = "/" in src_port.expression
+                incoming = None if computed else scale_of(src_port.datatype, src_port.scale)
+                target_scale = scale_of(f.datatype, f.scale)
                 if incoming is None or (incoming not in (-1,) and incoming > target_scale):
-                    notes.append(self.flag("rounds", c.line,
-                                           f"{c.from_field} ({src_port.datatype}) is rounded to {target_scale} decimal places "
-                                           f"by the target column {f.name} {dtype} (decision Q11)"))
-            cols.append(column(f"cast({r[1]} as {dtype})", f.name.lower(), "; ".join(notes)))
+                    what = (f"{c.from_field} is computed as {src_port.expression} ({lines(src_port.line, src_port.line)}), "
+                            f"a double at run time because high precision is off, and" if computed
+                            else f"{c.from_field} ({src_port.datatype})")
+                    notes.append(self.flag("rounds", c.line, f"{what} is rounded to {target_scale} decimal places "
+                                                             f"by the target column {f.name} {dtype} (decision Q11)"))
+            cols.append(column(f"cast({qualified(r)} as {dtype})", f.name.lower(), "; ".join(notes)))
         source = one_source(refs, self.target, inst.line)
         body = f"select\n{select_list(cols, 4)}\nfrom {source}"
         self.blocks.append(Block(self.target, "Target", table.line, table.end, body, f"writes {table.name}"))
@@ -315,7 +470,7 @@ class ModelBuilder:
 
     def build(self) -> Model:
         boxes = {"Source Qualifier": self.source_qualifier, "Expression": self.expression, "Sorter": self.sorter,
-                 "Joiner": self.joiner, "Router": self.router}
+                 "Joiner": self.joiner, "Router": self.router, "Aggregator": self.aggregator}
         for instance in self.order:
             inst = self.g.m.instances[instance]
             if inst.type == "SOURCE":

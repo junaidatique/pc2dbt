@@ -16,6 +16,7 @@
         "reference": 935,
         "only_ours": 0,
         "only_reference": 0,
+        "reason": "",
         "status": "matched"
       },
       "columns": [
@@ -45,6 +46,7 @@
         "reference": 6,
         "only_ours": 0,
         "only_reference": 0,
+        "reason": "",
         "status": "matched"
       },
       "columns": [
@@ -95,6 +97,7 @@
         "reference": 90900,
         "only_ours": 0,
         "only_reference": 0,
+        "reason": "",
         "status": "matched"
       },
       "columns": [
@@ -131,6 +134,7 @@
         "reference": 61948,
         "only_ours": 0,
         "only_reference": 0,
+        "reason": "",
         "status": "matched"
       },
       "columns": [
@@ -216,6 +220,7 @@
         "reference": 10,
         "only_ours": 0,
         "only_reference": 0,
+        "reason": "",
         "status": "matched"
       },
       "columns": [
@@ -288,6 +293,7 @@
         "reference": 65,
         "only_ours": 0,
         "only_reference": 0,
+        "reason": "",
         "status": "matched"
       },
       "columns": [

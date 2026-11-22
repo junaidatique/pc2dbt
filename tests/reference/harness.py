@@ -72,8 +72,8 @@ def build_ours(work: Path, mappings: list[str]) -> Build:
 
 
 def build_reference() -> Build:
-    """jaffle-shop staging models at the pinned commit, built once and cached."""
-    project, db = CACHE / f"jaffle-shop-{JAFFLE_COMMIT}", CACHE / f"reference-{JAFFLE_COMMIT}.duckdb"
+    """jaffle-shop staging and mart models at the pinned commit, built once and cached."""
+    project, db = CACHE / f"jaffle-shop-{JAFFLE_COMMIT}", CACHE / f"reference-{JAFFLE_COMMIT}-staging-marts.duckdb"
     if db.exists():
         return Build(db, 0, "cached")
     if project.exists():
@@ -84,7 +84,7 @@ def build_reference() -> Build:
     write_profile(CACHE / "profiles", "default", db)
     log = []
     for args in (["deps"], ["seed", "--vars", "{load_source_data: true}"],
-                 ["run", "--select", "staging", "--vars", "{load_source_data: true}"]):
+                 ["run", "--select", "staging", "marts", "--vars", "{load_source_data: true}"]):
         done = dbt(args, project, CACHE / "profiles")
         log.append(done.stdout + done.stderr)
         if done.returncode != 0:
@@ -137,8 +137,15 @@ def compare(ours_db: Path, ref_db: Path, expected: dict) -> dict:
         n_r = con.execute(f"select count(*) from ref.main.{table}").fetchone()[0]
         only_o = con.execute(f"select count(*) from ours.main.{table} o anti join ref.main.{table} r on {on}").fetchone()[0]
         only_r = con.execute(f"select count(*) from ref.main.{table} r anti join ours.main.{table} o on {on}").fetchone()[0]
-        rows = {"ours": n_o, "reference": n_r, "only_ours": only_o, "only_reference": only_r,
-                "status": "matched" if (n_o == n_r and only_o == only_r == 0) else "unexplained"}
+        rows = {"ours": n_o, "reference": n_r, "only_ours": only_o, "only_reference": only_r, "reason": ""}
+        want = spec.get("rows")  # rows expected on one side only, with the reason
+        if want is None:
+            rows["status"] = "matched" if (n_o == n_r and only_o == only_r == 0) else "unexplained"
+        elif only_o == want.get("only_ours", 0) and only_r == want.get("only_reference", 0):
+            rows["status"] = "stale" if only_o == only_r == 0 else "explained"
+            rows["reason"] = want["reason"]
+        else:
+            rows["status"] = "unexplained"
         columns = []
         mapped_ref = set()
         for col, dtype in types_o.items():

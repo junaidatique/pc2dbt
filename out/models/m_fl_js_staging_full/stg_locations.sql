@@ -5,23 +5,23 @@ with
 -- SQ_RAW_STORES · Source Qualifier · L144–160 · reads RAW_STORES (L13–18)
 sq_raw_stores as (
     select
-        id,
-        name,
-        opened_at,
-        tax_rate
-    from {{ source('raw', 'raw_stores') }}
+        raw_stores.id,
+        raw_stores.name,
+        raw_stores.opened_at,
+        raw_stores.tax_rate
+    from {{ source('raw', 'raw_stores') }} as raw_stores
 ),
 
 -- EXP_LOCATIONS · Expression · L231–241
 exp_locations as (
     select
-        id as location_id,
-        name as location_name,
-        date_trunc('day', opened_at) as opened_date,
-        tax_rate,
-        case when tax_rate >= 0.15 then 'EMEA' else case when tax_rate >= 0.09 then 'APAC' else 'AMER' end end as region
+        sq_raw_stores.id as location_id,
+        sq_raw_stores.name as location_name,
+        date_trunc('day', sq_raw_stores.opened_at) as opened_date,
+        sq_raw_stores.tax_rate,
+        case when sq_raw_stores.tax_rate >= 0.15 then 'EMEA' else case when sq_raw_stores.tax_rate >= 0.09 then 'APAC' else 'AMER' end end as region
     from sq_raw_stores
-    where tax_rate is not null  -- FLAG error_default L235: TAX_RATE has an ERROR() default: a row with an empty TAX_RATE is skipped
+    where sq_raw_stores.tax_rate is not null  -- FLAG error_default L235: TAX_RATE has an ERROR() default: a row with an empty TAX_RATE is skipped
 ),
 
 -- SRT_LOC_BEFORE · Sorter · L258–273 · dropped: row order means nothing in a table (decision Q12)
@@ -30,48 +30,48 @@ exp_locations as (
 rtr_region__g_apac as (
     -- group G_APAC (L276)
     select
-        location_id as location_id1,
-        location_name as location_name1,
-        opened_date as opened_date1,
-        tax_rate as tax_rate1,
-        region as region1
+        exp_locations.location_id as location_id1,
+        exp_locations.location_name as location_name1,
+        exp_locations.opened_date as opened_date1,
+        exp_locations.tax_rate as tax_rate1,
+        exp_locations.region as region1
     from exp_locations
-    where coalesce(region = 'APAC', false)
+    where coalesce(exp_locations.region = 'APAC', false)
 ),
 
 rtr_region__g_amer as (
     -- group G_AMER (L278)
     select
-        location_id as location_id3,
-        location_name as location_name3,
-        opened_date as opened_date3,
-        tax_rate as tax_rate3,
-        region as region3
+        exp_locations.location_id as location_id3,
+        exp_locations.location_name as location_name3,
+        exp_locations.opened_date as opened_date3,
+        exp_locations.tax_rate as tax_rate3,
+        exp_locations.region as region3
     from exp_locations
-    where coalesce(region = 'AMER', false)
+    where coalesce(exp_locations.region = 'AMER', false)
 ),
 
 rtr_region__g_emea as (
     -- group G_EMEA (L279)
     select
-        location_id as location_id4,
-        location_name as location_name4,
-        opened_date as opened_date4,
-        tax_rate as tax_rate4,
-        region as region4
+        exp_locations.location_id as location_id4,
+        exp_locations.location_name as location_name4,
+        exp_locations.opened_date as opened_date4,
+        exp_locations.tax_rate as tax_rate4,
+        exp_locations.region as region4
     from exp_locations
-    where coalesce(region = 'EMEA', false)
+    where coalesce(exp_locations.region = 'EMEA', false)
 ),
 
 -- SRT_APAC · Sorter · L307–322 · dropped: row order means nothing in a table (decision Q12)
 -- EXP_APAC_RENAME_TRANS · Expression · L355–367
 exp_apac_rename_trans as (
     select
-        location_id1 as location_id,
-        location_name1 as location_name,
-        opened_date1 as opened_date,
-        tax_rate1 as tax_rate,
-        region1 as region
+        rtr_region__g_apac.location_id1 as location_id,
+        rtr_region__g_apac.location_name1 as location_name,
+        rtr_region__g_apac.opened_date1 as opened_date,
+        rtr_region__g_apac.tax_rate1 as tax_rate,
+        rtr_region__g_apac.region1 as region
     from rtr_region__g_apac
 ),
 
@@ -79,11 +79,11 @@ exp_apac_rename_trans as (
 -- EXP_EMEA_RENAME_TRANS · Expression · L440–452
 exp_emea_rename_trans as (
     select
-        location_id4 as location_id,
-        location_name4 as location_name,
-        opened_date4 as opened_date,
-        tax_rate4 as tax_rate,
-        region4 as region
+        rtr_region__g_emea.location_id4 as location_id,
+        rtr_region__g_emea.location_name4 as location_name,
+        rtr_region__g_emea.opened_date4 as opened_date,
+        rtr_region__g_emea.tax_rate4 as tax_rate,
+        rtr_region__g_emea.region4 as region
     from rtr_region__g_emea
 ),
 
@@ -91,11 +91,11 @@ exp_emea_rename_trans as (
 -- EXP_AMER_RENAME_TRANS · Expression · L427–439
 exp_amer_rename_trans as (
     select
-        location_id3 as location_id,
-        location_name3 as location_name,
-        opened_date3 as opened_date,
-        tax_rate3 as tax_rate,
-        region3 as region
+        rtr_region__g_amer.location_id3 as location_id,
+        rtr_region__g_amer.location_name3 as location_name,
+        rtr_region__g_amer.opened_date3 as opened_date,
+        rtr_region__g_amer.tax_rate3 as tax_rate,
+        rtr_region__g_amer.region3 as region
     from rtr_region__g_amer
 ),
 
@@ -103,37 +103,37 @@ exp_amer_rename_trans as (
 un_regions as (
     -- group APAC
     select
-        location_id,
-        location_name,
-        opened_date,
-        tax_rate,
-        region
+        exp_apac_rename_trans.location_id,
+        exp_apac_rename_trans.location_name,
+        exp_apac_rename_trans.opened_date,
+        exp_apac_rename_trans.tax_rate,
+        exp_apac_rename_trans.region
     from exp_apac_rename_trans
     union all
     -- group AMER
     select
-        location_id,
-        location_name,
-        opened_date,
-        tax_rate,
-        region
+        exp_amer_rename_trans.location_id,
+        exp_amer_rename_trans.location_name,
+        exp_amer_rename_trans.opened_date,
+        exp_amer_rename_trans.tax_rate,
+        exp_amer_rename_trans.region
     from exp_amer_rename_trans
     union all
     -- group EMEA
     select
-        location_id,
-        location_name,
-        opened_date,
-        tax_rate,
-        region
+        exp_emea_rename_trans.location_id,
+        exp_emea_rename_trans.location_name,
+        exp_emea_rename_trans.opened_date,
+        exp_emea_rename_trans.tax_rate,
+        exp_emea_rename_trans.region
     from exp_emea_rename_trans
 )
 -- SRT_LOC_AFTER · Sorter · L242–257 · dropped: row order means nothing in a table (decision Q12)
 
 select
-    cast(location_id as varchar) as location_id,
-    cast(location_name as varchar) as location_name,
-    cast(opened_date as timestamp) as opened_date,
-    cast(tax_rate as decimal(6,4)) as tax_rate,
-    cast(region as varchar) as region
+    cast(un_regions.location_id as varchar) as location_id,
+    cast(un_regions.location_name as varchar) as location_name,
+    cast(un_regions.opened_date as timestamp) as opened_date,
+    cast(un_regions.tax_rate as decimal(6,4)) as tax_rate,
+    cast(un_regions.region as varchar) as region
 from un_regions

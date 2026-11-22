@@ -44,5 +44,6 @@ def test_every_difference_from_jaffle_shop_is_explained(built):
     RESULTS.write_text(json.dumps(results, indent=2) + "\n")
     problems = [(t["table"], c["ours"] or c["reference"], c["status"])
                 for t in results["tables"] for c in t["columns"] if c["status"] in ("unexplained", "stale")]
-    problems += [(t["table"], "rows", t["rows"]["status"]) for t in results["tables"] if t["rows"]["status"] != "matched"]
+    problems += [(t["table"], "rows", t["rows"]["status"]) for t in results["tables"]
+                 if t["rows"]["status"] not in ("matched", "explained")]
     assert problems == []

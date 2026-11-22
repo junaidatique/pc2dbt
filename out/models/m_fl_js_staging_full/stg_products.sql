@@ -5,35 +5,35 @@ with
 -- SQ_RAW_PRODUCTS · Source Qualifier · L126–143 · reads RAW_PRODUCTS (L19–25)
 sq_raw_products as (
     select
-        sku,
-        name,
-        type,
-        price,
-        description
-    from {{ source('raw', 'raw_products') }}
+        raw_products.sku,
+        raw_products.name,
+        raw_products.type,
+        raw_products.price,
+        raw_products.description
+    from {{ source('raw', 'raw_products') }} as raw_products
 ),
 
 -- EXP_PRODUCTS · Expression · L197–212
 exp_products as (
     select
-        sku as product_id,
-        name as product_name,
-        type as product_type,
-        price / 100 as product_price,
-        price as product_price_cents,
-        description as product_description,
-        case when upper(ltrim(rtrim(type))) = 'JAFFLE' then 1 else 0 end as is_food_item,
-        case when upper(ltrim(rtrim(type))) = 'BEVERAGE' then 1 else 0 end as is_drink_item
+        sq_raw_products.sku as product_id,
+        sq_raw_products.name as product_name,
+        sq_raw_products.type as product_type,
+        sq_raw_products.price / 100 as product_price,
+        sq_raw_products.price as product_price_cents,
+        sq_raw_products.description as product_description,
+        case when upper(ltrim(rtrim(sq_raw_products.type))) = 'JAFFLE' then 1 else 0 end as is_food_item,
+        case when upper(ltrim(rtrim(sq_raw_products.type))) = 'BEVERAGE' then 1 else 0 end as is_drink_item
     from sq_raw_products
 )
 
 select
-    cast(product_id as varchar) as product_id,
-    cast(product_name as varchar) as product_name,
-    cast(product_type as varchar) as product_type,
-    cast(product_price as decimal(15,0)) as product_price_cents,  -- FLAG crossed L620: EXP_PRODUCTS.PRODUCT_PRICE goes into STG_PRODUCTS.PRODUCT_PRICE_CENTS, as the connector says; FLAG rounds L620: PRODUCT_PRICE (double) is rounded to 0 decimal places by the target column PRODUCT_PRICE_CENTS decimal(15,0) (decision Q11)
-    cast(product_price_cents as decimal(12,2)) as product_price,  -- FLAG crossed L621: EXP_PRODUCTS.PRODUCT_PRICE_CENTS goes into STG_PRODUCTS.PRODUCT_PRICE, as the connector says; FLAG rounds L621: PRODUCT_PRICE_CENTS (double) is rounded to 2 decimal places by the target column PRODUCT_PRICE decimal(12,2) (decision Q11)
-    cast(product_description as varchar) as product_description,
-    cast(is_food_item as decimal(1,0)) as is_food_item,
-    cast(is_drink_item as decimal(1,0)) as is_drink_item
+    cast(exp_products.product_id as varchar) as product_id,
+    cast(exp_products.product_name as varchar) as product_name,
+    cast(exp_products.product_type as varchar) as product_type,
+    cast(exp_products.product_price as decimal(15,0)) as product_price_cents,  -- FLAG crossed L620: EXP_PRODUCTS.PRODUCT_PRICE goes into STG_PRODUCTS.PRODUCT_PRICE_CENTS, as the connector says; FLAG rounds L620: PRODUCT_PRICE is computed as PRICE/100 (L201), a double at run time because high precision is off, and is rounded to 0 decimal places by the target column PRODUCT_PRICE_CENTS decimal(15,0) (decision Q11)
+    cast(exp_products.product_price_cents as decimal(12,2)) as product_price,  -- FLAG crossed L621: EXP_PRODUCTS.PRODUCT_PRICE_CENTS goes into STG_PRODUCTS.PRODUCT_PRICE, as the connector says; FLAG rounds L621: PRODUCT_PRICE_CENTS (double) is rounded to 2 decimal places by the target column PRODUCT_PRICE decimal(12,2) (decision Q11)
+    cast(exp_products.product_description as varchar) as product_description,
+    cast(exp_products.is_food_item as decimal(1,0)) as is_food_item,
+    cast(exp_products.is_drink_item as decimal(1,0)) as is_drink_item
 from exp_products

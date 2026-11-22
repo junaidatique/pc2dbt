@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .convert import Flag, Model, convert_mapping, lines
+from .convert import Flag, Model, convert_mapping, lines, written_tables
 from .parse import Folder, parse_file
 from .types import duck_type
 
@@ -113,9 +113,10 @@ def write_project(xml_path, out_dir, mappings: list[str] | None = None) -> Repor
         target_dir = out / "models" / m.folder
         target_dir.mkdir(parents=True, exist_ok=True)
         (target_dir / f"{m.name}.sql").write_text(m.sql)
+    written = written_tables(folder)  # read with ref(), so not a dbt source (decision Q5)
     for mname in names:
         mp = folder.mappings[mname]
-        used |= {(i.dbd, i.definition) for i in mp.instances.values() if i.type == "SOURCE"}
+        used |= {(i.dbd, i.definition) for i in mp.instances.values() if i.type == "SOURCE" and i.definition not in written}
     (out / "models" / "sources.yml").write_text(sources_yml(folder, used))
     (out / "flags.md").write_text(flags_md(xml_path.name, report))
     return report
